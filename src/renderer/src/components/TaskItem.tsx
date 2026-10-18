@@ -11,7 +11,16 @@ import { useDataStore } from '@renderer/store/useDataStore'
 import { isOverdue } from '../../../shared/taskRules'
 import type { Subtask, Task } from '../../../shared/types'
 
-export function TaskItem({ task }: { task: Task }): React.JSX.Element {
+/** Piezas para poder arrastrar la tarea (solo las tareas pendientes se arrastran). */
+export interface TaskDrag {
+  setNodeRef: (node: HTMLElement | null) => void
+  style: React.CSSProperties
+  isDragging: boolean
+  /** Botón-asa para arrastrar. */
+  handle: React.ReactNode
+}
+
+export function TaskItem({ task, drag }: { task: Task; drag?: TaskDrag }): React.JSX.Element {
   const {
     toggleTask,
     updateTask,
@@ -32,8 +41,13 @@ export function TaskItem({ task }: { task: Task }): React.JSX.Element {
   const overdue = !task.completed && isOverdue(task.dueDate, todayString())
 
   return (
-    <li className="grid gap-1">
+    <li
+      ref={drag?.setNodeRef}
+      style={drag?.style}
+      className={cn('grid gap-1 bg-card', drag?.isDragging && 'relative z-10 rounded shadow-md')}
+    >
       <div className="flex items-start gap-2">
+        {drag ? drag.handle : <span className="w-5 shrink-0" aria-hidden="true" />}
         <input
           type="checkbox"
           className="mt-1 size-4 shrink-0 accent-primary"

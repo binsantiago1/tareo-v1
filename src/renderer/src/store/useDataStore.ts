@@ -5,6 +5,7 @@ import {
   type AppData,
   type DateOnly,
   type Priority,
+  type SortCriterion,
   type Task
 } from '../../../shared/types'
 import {
@@ -44,6 +45,11 @@ interface DataState {
   addArea: (values: AreaValues) => void
   updateArea: (id: string, values: AreaValues) => void
   removeArea: (id: string) => void
+  /** Pone los post-its en el orden dado (lista de ids de áreas). */
+  reorderAreas: (orderedIds: string[]) => void
+  setSortCriterion: (areaId: string, criterion: SortCriterion) => void
+  /** Guarda el orden arrastrado de las tareas pendientes y pasa el área a "personalizado". */
+  reorderTasks: (areaId: string, orderedPendingIds: string[]) => void
   addTask: (areaId: string, title: string) => void
   updateTask: (id: string, values: TaskValues) => void
   removeTask: (id: string) => void
@@ -104,6 +110,48 @@ export const useDataStore = create<DataState>((set, get) => {
           ...data,
           areas: data.areas.filter((a) => a.id !== id),
           tasks: data.tasks.filter((t) => t.areaId !== id)
+        }
+      })
+    },
+
+    reorderAreas: (orderedIds) => {
+      const { data } = get()
+      const position = new Map(orderedIds.map((id, i) => [id, i + 1]))
+      set({
+        data: {
+          ...data,
+          areas: data.areas.map((a) => ({ ...a, order: position.get(a.id) ?? a.order }))
+        }
+      })
+    },
+
+    setSortCriterion: (areaId, criterion) => {
+      const { data } = get()
+      set({
+        data: {
+          ...data,
+          areas: data.areas.map((a) => (a.id === areaId ? { ...a, sortCriterion: criterion } : a))
+        }
+      })
+    },
+
+    reorderTasks: (areaId, orderedPendingIds) => {
+      const { data } = get()
+      // Las completadas se quedan detrás, en el orden personal que ya tenían.
+      const completedIds = data.tasks
+        .filter((t) => t.areaId === areaId && !orderedPendingIds.includes(t.id))
+        .sort((a, b) => a.personalOrder - b.personalOrder)
+        .map((t) => t.id)
+      const position = new Map([...orderedPendingIds, ...completedIds].map((id, i) => [id, i + 1]))
+      set({
+        data: {
+          ...data,
+          areas: data.areas.map((a) =>
+            a.id === areaId ? { ...a, sortCriterion: 'personalizado' } : a
+          ),
+          tasks: data.tasks.map((t) =>
+            t.areaId === areaId ? { ...t, personalOrder: position.get(t.id) ?? t.personalOrder } : t
+          )
         }
       })
     },
