@@ -1,14 +1,25 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
-import type { Area } from '../../../shared/types'
+import { QuickAdd } from '@renderer/components/QuickAdd'
+import { TaskItem } from '@renderer/components/TaskItem'
+import { useDataStore } from '@renderer/store/useDataStore'
+import type { Area, Task } from '../../../shared/types'
 
 interface Props {
   area: Area
+  tasks: Task[]
   onEdit: () => void
   onDelete: () => void
 }
 
-export function PostIt({ area, onEdit, onDelete }: Props): React.JSX.Element {
+export function PostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Element {
+  const addTask = useDataStore((s) => s.addTask)
+
+  // Hasta la Fase 5 (orden) las tareas van por orden de creación, con las completadas al final.
+  const sorted = [...tasks].sort(
+    (a, b) => Number(a.completed) - Number(b.completed) || a.personalOrder - b.personalOrder
+  )
+
   return (
     <article
       aria-label={`Área ${area.name}`}
@@ -28,7 +39,26 @@ export function PostIt({ area, onEdit, onDelete }: Props): React.JSX.Element {
       {area.note && (
         <p className="text-sm whitespace-pre-wrap break-words text-muted-foreground">{area.note}</p>
       )}
-      <p className="mt-auto text-sm text-muted-foreground">Aquí irán las tareas.</p>
+
+      {sorted.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Sin tareas. Escribe una abajo y pulsa Enter.
+        </p>
+      ) : (
+        <ul className="grid gap-2 text-sm">
+          {sorted.map((task) => (
+            <TaskItem key={task.id} task={task} />
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-auto pt-2">
+        <QuickAdd
+          label={`Nueva tarea en ${area.name}`}
+          placeholder="Nueva tarea y Enter"
+          onAdd={(title) => addTask(area.id, title)}
+        />
+      </div>
     </article>
   )
 }

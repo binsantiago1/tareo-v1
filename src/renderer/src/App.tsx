@@ -66,6 +66,7 @@ function App(): React.JSX.Element {
               <PostIt
                 key={area.id}
                 area={area}
+                tasks={data.tasks.filter((t) => t.areaId === area.id)}
                 onEdit={() => setEditing(area)}
                 onDelete={() => setDeleting(area)}
               />
