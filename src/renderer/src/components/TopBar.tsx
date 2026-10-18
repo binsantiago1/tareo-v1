@@ -1,11 +1,12 @@
 import { Archive, Plus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 
-export type View = 'lista' | 'cuadricula'
+export type View = 'lista' | 'cuadricula' | 'calendario'
 
 const VIEWS: { value: View; label: string }[] = [
   { value: 'lista', label: 'Lista' },
-  { value: 'cuadricula', label: 'Cuadrícula' }
+  { value: 'cuadricula', label: 'Cuadrícula' },
+  { value: 'calendario', label: 'Calendario' }
 ]
 
 interface Props {
@@ -28,7 +29,7 @@ export function TopBar({
   return (
     <header className="flex items-center justify-between gap-4 border-b px-6 py-3">
       <h1 className="text-xl font-semibold">Pendientes</h1>
-      {/* Selector de vista (el Calendario llega en la Fase 8). */}
+      {/* Selector de vista */}
       <div role="group" aria-label="Vista" className="flex gap-1 rounded-md border p-0.5">
         {VIEWS.map((v) => {
           const active = !archiveOpen && view === v.value

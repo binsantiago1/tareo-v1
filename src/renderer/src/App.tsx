@@ -18,6 +18,7 @@ import { Button } from '@renderer/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog'
 import { AreaDialog } from '@renderer/components/AreaDialog'
 import { ArchiveView } from '@renderer/components/ArchiveView'
+import { CalendarView } from '@renderer/components/CalendarView'
 import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
 import { GridPostIt } from '@renderer/components/GridPostIt'
 import { PostIt } from '@renderer/components/PostIt'
@@ -123,6 +124,8 @@ function App(): React.JSX.Element {
             </p>
             <Button onClick={() => setCreating(true)}>Nueva área</Button>
           </div>
+        ) : view === 'calendario' ? (
+          <CalendarView />
         ) : view === 'lista' ? (
           <DndContext
             sensors={sensors}
