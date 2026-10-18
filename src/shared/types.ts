@@ -36,6 +36,8 @@ export interface Area {
   /** Posición del post-it. */
   order: number
   sortCriterion: SortCriterion
+  /** Color del post-it (id de la paleta). Las áreas antiguas pueden no tenerlo. */
+  color?: string
 }
 
 export interface AppData {

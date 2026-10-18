@@ -19,6 +19,7 @@ import {
 interface AreaValues {
   name: string
   note: string
+  color: string
 }
 
 export interface TaskValues {
@@ -96,25 +97,28 @@ export const useDataStore = create<DataState>((set, get) => {
 
     replaceData: (data) => set({ data, undo: undefined }),
 
-    addArea: ({ name, note }) => {
+    addArea: ({ name, note, color }) => {
       const { data } = get()
       const order = data.areas.reduce((max, a) => Math.max(max, a.order), 0) + 1
       const area: Area = {
         id: crypto.randomUUID(),
         name,
         note: note || undefined,
+        color,
         order,
         sortCriterion: 'prioridad'
       }
       set({ data: { ...data, areas: [...data.areas, area] } })
     },
 
-    updateArea: (id, { name, note }) => {
+    updateArea: (id, { name, note, color }) => {
       const { data } = get()
       set({
         data: {
           ...data,
-          areas: data.areas.map((a) => (a.id === id ? { ...a, name, note: note || undefined } : a))
+          areas: data.areas.map((a) =>
+            a.id === id ? { ...a, name, note: note || undefined, color } : a
+          )
         }
       })
     },

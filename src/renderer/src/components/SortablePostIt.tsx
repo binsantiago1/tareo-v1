@@ -11,6 +11,8 @@ interface Props {
   onDelete: () => void
 }
 
+const TILTS = ['-0.5deg', '0.4deg', '-0.2deg', '0.55deg']
+
 /** Post-it que se puede mover arrastrándolo (vista Lista). */
 export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Element {
   const {
@@ -32,7 +34,12 @@ export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.
       drag={{
         setNodeRef,
         isDragging,
-        style: { transform: CSS.Translate.toString(transform), transition },
+        style: {
+          transform: CSS.Translate.toString(transform),
+          transition,
+          // Cada post-it va ligeramente torcido, como pegado a mano; al arrastrarlo se endereza.
+          rotate: isDragging ? '0deg' : TILTS[area.order % TILTS.length]
+        },
         handle: (
           <button
             type="button"

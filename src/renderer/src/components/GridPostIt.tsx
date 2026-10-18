@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { PriorityMark } from '@renderer/components/PriorityMark'
+import { noteStyle } from '@renderer/lib/noteStyle'
 import { sortTasks } from '../../../shared/sorting'
 import { visibleTaskCount } from '../../../shared/grid'
 import type { Area, Task } from '../../../shared/types'
@@ -37,9 +38,10 @@ export function GridPostIt({ area, tasks, onOpen }: Props): React.JSX.Element {
       type="button"
       onClick={onOpen}
       aria-label={`Abrir el área ${area.name} (${tasks.length} ${tasks.length === 1 ? 'tarea pendiente' : 'tareas pendientes'})`}
-      className="flex aspect-square min-w-0 flex-col gap-1.5 overflow-hidden rounded-lg border bg-card p-3 text-left text-card-foreground shadow-sm transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      style={noteStyle(area.color)}
+      className="note paper flex aspect-square min-w-0 flex-col gap-1.5 overflow-hidden p-3 pt-4 text-left transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:transition-none"
     >
-      <span className="line-clamp-2 text-lg leading-tight font-semibold break-words">
+      <span className="line-clamp-2 text-lg leading-tight font-bold tracking-tight break-words">
         {area.name}
       </span>
       {area.note && (

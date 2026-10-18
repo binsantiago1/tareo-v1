@@ -1,6 +1,7 @@
 import { Archive, DatabaseBackup, Plus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { ThemeToggle } from '@renderer/components/ThemeToggle'
+import { noteStyle } from '@renderer/lib/noteStyle'
 
 export type View = 'lista' | 'cuadricula' | 'calendario'
 
@@ -30,8 +31,15 @@ export function TopBar({
   onNewArea
 }: Props): React.JSX.Element {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-6 py-3">
-      <h1 className="text-xl font-semibold">Pendientes</h1>
+    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b bg-card px-6 py-3">
+      <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight">
+        <span
+          aria-hidden="true"
+          className="note paper block size-6 rotate-[-4deg]"
+          style={noteStyle('amarillo')}
+        />
+        Pendientes
+      </h1>
       {/* Selector de vista */}
       <div role="group" aria-label="Vista" className="flex gap-1 rounded-md border p-0.5">
         {VIEWS.map((v) => {

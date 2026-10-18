@@ -13,9 +13,11 @@ import {
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
+import { AreaTag } from '@renderer/components/AreaTag'
 import { ItemDialog } from '@renderer/components/ItemDialog'
 import { PriorityMark } from '@renderer/components/PriorityMark'
 import { todayString } from '@renderer/lib/dates'
+import { noteStyle } from '@renderer/lib/noteStyle'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { isOverdue } from '../../../shared/taskRules'
@@ -39,6 +41,7 @@ export function CalendarView(): React.JSX.Element {
 
   const today = todayString()
   const areaNames = useMemo(() => new Map(data.areas.map((a) => [a.id, a.name])), [data.areas])
+  const areaColors = useMemo(() => new Map(data.areas.map((a) => [a.id, a.color])), [data.areas])
 
   const { byDay, undated } = useMemo(() => {
     const pending = sortTasks(
@@ -135,6 +138,7 @@ export function CalendarView(): React.JSX.Element {
                     key={task.id}
                     task={task}
                     areaName={areaNames.get(task.areaId)}
+                    color={areaColors.get(task.areaId)}
                     overdue={isOverdue(task.dueDate, today)}
                     onOpen={() => setEditing(task)}
                   />
@@ -155,12 +159,15 @@ export function CalendarView(): React.JSX.Element {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {undatedByArea.map(({ area, tasks }) => (
               <div key={area.id} className="grid content-start gap-1 rounded-lg border bg-card p-3">
-                <h3 className="text-sm font-semibold">{area.name}</h3>
+                <h3 className="mb-1">
+                  <AreaTag name={area.name} color={area.color} />
+                </h3>
                 {tasks.map((task) => (
                   <TaskChip
                     key={task.id}
                     task={task}
                     areaName={area.name}
+                    color={area.color}
                     overdue={false}
                     onOpen={() => setEditing(task)}
                   />
@@ -191,11 +198,13 @@ export function CalendarView(): React.JSX.Element {
 function TaskChip({
   task,
   areaName,
+  color,
   overdue,
   onOpen
 }: {
   task: Task
   areaName?: string
+  color?: string
   overdue: boolean
   onOpen: () => void
 }): React.JSX.Element {
@@ -207,11 +216,12 @@ function TaskChip({
     <button
       type="button"
       onClick={onOpen}
+      style={noteStyle(color)}
       title={areaName ? `${task.title} (${areaName})` : task.title}
       aria-label={`Editar tarea ${description}`}
       className={cn(
-        'flex w-full min-w-0 items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-left text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-        overdue && 'border border-destructive font-medium text-destructive'
+        'note flex w-full min-w-0 items-center gap-1 rounded-sm border border-black/10 px-1.5 py-0.5 text-left text-xs hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card focus-visible:outline-none dark:border-white/15',
+        overdue && 'border-destructive font-semibold'
       )}
     >
       <PriorityMark priority={task.priority} />

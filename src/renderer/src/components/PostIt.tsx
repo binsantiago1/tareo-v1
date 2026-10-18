@@ -17,6 +17,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { QuickAdd } from '@renderer/components/QuickAdd'
 import { SortableTask } from '@renderer/components/SortableTask'
+import { noteStyle } from '@renderer/lib/noteStyle'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { sortTasks } from '../../../shared/sorting'
@@ -69,17 +70,19 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
   return (
     <article
       ref={drag?.setNodeRef}
-      style={drag?.style}
+      style={{ ...noteStyle(area.color), ...drag?.style }}
       aria-label={`Área ${area.name}`}
       className={cn(
-        'flex min-h-64 flex-col gap-3 rounded-lg border bg-card p-4 text-card-foreground shadow-sm',
-        drag?.isDragging && 'relative z-20 opacity-90 shadow-xl'
+        'note paper flex min-h-64 flex-col gap-3 p-4 pt-5',
+        drag?.isDragging && 'relative z-20 scale-[1.02] opacity-90'
       )}
     >
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-1">
           {drag?.handle}
-          <h2 className="text-2xl leading-tight font-semibold break-words">{area.name}</h2>
+          <h2 className="text-2xl leading-tight font-bold tracking-tight break-words">
+            {area.name}
+          </h2>
         </div>
         <div className="flex shrink-0">
           <Button variant="ghost" size="icon" aria-label={`Editar ${area.name}`} onClick={onEdit}>
@@ -99,7 +102,7 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
         <select
           value={area.sortCriterion}
           onChange={(e) => setSortCriterion(area.id, e.target.value as SortCriterion)}
-          className="h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="h-7 rounded-md border border-input bg-field px-2 text-xs text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {CRITERIA.map((c) => (
             <option key={c.value} value={c.value}>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArchiveRestore, Trash2 } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
+import { AreaTag } from '@renderer/components/AreaTag'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { PriorityMark } from '@renderer/components/PriorityMark'
 import { formatCompletedDate } from '@renderer/lib/dates'
@@ -14,7 +15,7 @@ export function ArchiveView(): React.JSX.Element {
   const removeTask = useDataStore((s) => s.removeTask)
   const [deleting, setDeleting] = useState<Task | null>(null)
 
-  const areaNames = useMemo(() => new Map(data.areas.map((a) => [a.id, a.name])), [data.areas])
+  const areas = useMemo(() => new Map(data.areas.map((a) => [a.id, a])), [data.areas])
   // Las más recientes primero.
   const archived = useMemo(
     () =>
@@ -47,10 +48,15 @@ export function ArchiveView(): React.JSX.Element {
                 <span className="break-words">{task.title}</span>
                 <PriorityMark priority={task.priority} />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {areaNames.get(task.areaId) ?? 'Área desconocida'}
-                {task.completedAt && ` · Completada el ${formatCompletedDate(task.completedAt)}`}
-                {task.subtasks.length > 0 && ` · ${task.subtasks.length} subtareas`}
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                <AreaTag
+                  name={areas.get(task.areaId)?.name ?? 'Área desconocida'}
+                  color={areas.get(task.areaId)?.color}
+                />
+                {task.completedAt && (
+                  <span>Completada el {formatCompletedDate(task.completedAt)}</span>
+                )}
+                {task.subtasks.length > 0 && <span>{task.subtasks.length} subtareas</span>}
               </p>
               {task.note && (
                 <p className="mt-1 text-xs whitespace-pre-wrap break-words text-muted-foreground">

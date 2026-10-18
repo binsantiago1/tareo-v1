@@ -6,7 +6,7 @@ const STYLES: Record<Priority, string> = {
   0: '',
   1: 'border-border text-foreground',
   2: 'border-destructive text-destructive',
-  3: 'border-destructive bg-destructive text-white'
+  3: 'border-destructive bg-destructive text-destructive-foreground'
 }
 
 /** Muestra !, !! o !!! (nada si no hay prioridad). */

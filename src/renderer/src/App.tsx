@@ -28,6 +28,7 @@ import { TopBar, type View } from '@renderer/components/TopBar'
 import { UndoToast } from '@renderer/components/UndoToast'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { autoGridColumns, type GridColumns } from '../../shared/grid'
+import { DEFAULT_NOTE_COLOR, nextFreeColor } from '../../shared/palette'
 import type { Area } from '../../shared/types'
 
 type ColumnsSetting = 'auto' | GridColumns
@@ -159,7 +160,7 @@ function App(): React.JSX.Element {
                   const v = e.target.value
                   setColumnsSetting(v === 'auto' ? 'auto' : (Number(v) as GridColumns))
                 }}
-                className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="h-8 rounded-md border border-input bg-field px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <option value="auto">Automático ({autoGridColumns(areas.length)})</option>
                 <option value="2">2</option>
@@ -203,10 +204,16 @@ function App(): React.JSX.Element {
       </Dialog>
 
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
-      <AreaDialog open={creating} onOpenChange={setCreating} onSave={addArea} />
+      <AreaDialog
+        open={creating}
+        defaultColor={nextFreeColor(areas.map((a) => a.color))}
+        onOpenChange={setCreating}
+        onSave={addArea}
+      />
       <AreaDialog
         key={editing?.id}
         area={editing ?? undefined}
+        defaultColor={DEFAULT_NOTE_COLOR}
         open={editing !== null}
         onOpenChange={(open) => !open && setEditing(null)}
         onSave={(values) => editing && updateArea(editing.id, values)}
