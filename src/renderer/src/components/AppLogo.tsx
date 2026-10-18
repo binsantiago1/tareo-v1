@@ -1,12 +1,18 @@
 import type { SVGProps } from 'react'
 
-/** Isotipo de la app (el SVG del logo). Toma el color del texto (currentColor). */
+/**
+ * Isotipo de la app (el SVG del logo), con un trazo extra de 18 unidades para darle más grosor.
+ * Toma el color del texto (currentColor).
+ */
 export function AppLogo(props: SVGProps<SVGSVGElement>): React.JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 511.8 469.13"
+      viewBox="-10 -10 531.8 489.13"
       fill="currentColor"
+      stroke="currentColor"
+      strokeWidth={18}
+      strokeLinejoin="round"
       aria-hidden="true"
       {...props}
     >

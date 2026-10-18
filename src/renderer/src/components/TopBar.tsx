@@ -64,7 +64,7 @@ export function TopBar({
         )}
       >
         <span className="flex size-11 shrink-0 items-center justify-center" aria-hidden="true">
-          <AppLogo className="h-5 w-auto" />
+          <AppLogo className="h-6 w-auto" />
         </span>
         <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-700 ease-in-out group-hover/brand:max-w-40 group-hover/brand:pr-5 group-hover/brand:opacity-100 motion-reduce:transition-none">
           Pendientes
