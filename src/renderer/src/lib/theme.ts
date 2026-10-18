@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 
-/** "sistema" sigue el modo claro/oscuro de Windows. */
+/**
+ * Lo que se guarda: "claro" u "oscuro" (elegido por la persona).
+ * "sistema" solo existe hasta la primera vez que se usa el interruptor: la app arranca con el
+ * modo de Windows y, al elegir, se recuerda la elección.
+ */
 export type ThemePreference = 'sistema' | 'claro' | 'oscuro'
 
 const STORAGE_KEY = 'pendientes-tema'
@@ -24,34 +28,40 @@ function writeThemePreference(preference: ThemePreference): void {
   }
 }
 
-/** Pone o quita la clase "dark" en la página según la preferencia. */
-export function applyTheme(preference: ThemePreference): void {
-  const dark =
+function isDark(preference: ThemePreference): boolean {
+  return (
     preference === 'oscuro' || (preference === 'sistema' && window.matchMedia(DARK_QUERY).matches)
-  document.documentElement.classList.toggle('dark', dark)
+  )
 }
 
-/** Preferencia de tema (recordada) y función para cambiarla. */
-export function useTheme(): {
-  preference: ThemePreference
-  setPreference: (p: ThemePreference) => void
-} {
-  const [preference, setPreferenceState] = useState<ThemePreference>(readThemePreference)
+/** Pone o quita la clase "dark" en la página según la preferencia. */
+export function applyTheme(preference: ThemePreference): void {
+  document.documentElement.classList.toggle('dark', isDark(preference))
+}
+
+/** Modo oscuro activo (sí/no) y función para elegir claro u oscuro. */
+export function useTheme(): { dark: boolean; setDark: (dark: boolean) => void } {
+  const [preference, setPreference] = useState<ThemePreference>(readThemePreference)
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia(DARK_QUERY).matches)
+  const dark = preference === 'oscuro' || (preference === 'sistema' && systemDark)
 
   useEffect(() => {
-    applyTheme(preference)
-    if (preference !== 'sistema') return
-    // Si Windows cambia de modo mientras la app está abierta, la app lo sigue.
+    document.documentElement.classList.toggle('dark', dark)
+  }, [dark])
+
+  useEffect(() => {
+    // Mientras no se haya elegido, la app sigue los cambios de modo de Windows.
     const media = window.matchMedia(DARK_QUERY)
-    const onChange = (): void => applyTheme('sistema')
+    const onChange = (event: MediaQueryListEvent): void => setSystemDark(event.matches)
     media.addEventListener('change', onChange)
     return () => media.removeEventListener('change', onChange)
-  }, [preference])
+  }, [])
 
-  const setPreference = (p: ThemePreference): void => {
-    writeThemePreference(p)
-    setPreferenceState(p)
+  const setDark = (value: boolean): void => {
+    const next: ThemePreference = value ? 'oscuro' : 'claro'
+    writeThemePreference(next)
+    setPreference(next)
   }
 
-  return { preference, setPreference }
+  return { dark, setDark }
 }
