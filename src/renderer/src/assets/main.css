@@ -147,19 +147,54 @@
   }
 
   /* La hoja de papel: sombra suave en capas y el borde pegajoso de arriba, algo más oscuro. */
+  /*
+   * La hoja de papel: el borde pegajoso de arriba, algo más oscuro, y la esquina inferior derecha
+   * doblada (se recorta un triángulo y se pinta la solapa). La sombra no va aquí, porque el recorte
+   * la cortaría: la lleva el contenedor (.paper-shadow).
+   */
   .paper {
-    border-radius: 3px 3px 6px 6px;
-    box-shadow:
-      inset 0 7px 6px -7px color-mix(in oklab, var(--note-ink) 22%, transparent),
-      0 1px 1px oklch(0 0 0 / 0.1),
-      0 8px 14px -8px oklch(0 0 0 / 0.35);
+    --fold: 26px;
+    position: relative;
+    border-radius: 3px 3px 0 6px;
+    box-shadow: inset 0 7px 6px -7px color-mix(in oklab, var(--note-ink) 22%, transparent);
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - var(--fold)),
+      calc(100% - var(--fold)) 100%,
+      0 100%
+    );
+  }
+
+  .paper::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: var(--fold);
+    height: var(--fold);
+    pointer-events: none;
+    /* La solapa: más clara en la punta y más oscura junto al doblez (la diagonal). */
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--note-bg) 90%, white) 0%,
+      color-mix(in oklab, var(--note-bg) 72%, black) 49%,
+      transparent 50%
+    );
+    border-top-left-radius: 4px;
   }
 
   .dark .paper {
-    box-shadow:
-      inset 0 7px 6px -7px oklch(0 0 0 / 0.35),
-      0 1px 1px oklch(0 0 0 / 0.4),
-      0 8px 14px -8px oklch(0 0 0 / 0.7);
+    box-shadow: inset 0 7px 6px -7px oklch(0 0 0 / 0.35);
+  }
+
+  /* Sombra del post-it (sigue la forma recortada, con la esquina doblada). */
+  .paper-shadow {
+    filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.12)) drop-shadow(0 7px 7px oklch(0 0 0 / 0.22));
+  }
+
+  .dark .paper-shadow {
+    filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.4)) drop-shadow(0 7px 7px oklch(0 0 0 / 0.55));
   }
 
   /* Aparición de los avisos de abajo. */

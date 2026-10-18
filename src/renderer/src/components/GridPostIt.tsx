@@ -34,40 +34,44 @@ export function GridPostIt({ area, tasks, onOpen }: Props): React.JSX.Element {
   const { shown, hidden } = visibleTaskCount(sorted.length, listHeight, ROW_HEIGHT)
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`Abrir el área ${area.name} (${tasks.length} ${tasks.length === 1 ? 'tarea pendiente' : 'tareas pendientes'})`}
-      style={noteStyle(area.color)}
-      className="note paper flex aspect-square min-w-0 flex-col gap-1.5 overflow-hidden p-3 pt-4 text-left transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:transition-none"
-    >
-      <span className="line-clamp-2 text-lg leading-tight font-bold tracking-tight break-words">
-        {area.name}
-      </span>
-      {area.note && (
-        <span className="line-clamp-2 text-xs break-words text-muted-foreground">{area.note}</span>
-      )}
-      <span ref={listRef} className="mt-1 block min-h-0 flex-1 overflow-hidden">
-        {sorted.length === 0 ? (
-          <span className="flex h-6 items-center text-sm text-muted-foreground">
-            Sin tareas pendientes
+    <div className="paper-shadow rounded-md has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Abrir el área ${area.name} (${tasks.length} ${tasks.length === 1 ? 'tarea pendiente' : 'tareas pendientes'})`}
+        style={noteStyle(area.color)}
+        className="note paper flex aspect-square min-w-0 flex-col gap-1.5 overflow-hidden p-3 pt-4 text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none motion-reduce:transition-none"
+      >
+        <span className="line-clamp-2 text-lg leading-tight font-bold tracking-tight break-words">
+          {area.name}
+        </span>
+        {area.note && (
+          <span className="line-clamp-2 text-xs break-words text-muted-foreground">
+            {area.note}
           </span>
-        ) : (
-          <>
-            {sorted.slice(0, shown).map((task) => (
-              <span key={task.id} className="flex h-6 items-center gap-1.5 text-sm">
-                <PriorityMark priority={task.priority} />
-                <span className="truncate">{task.title}</span>
-              </span>
-            ))}
-            {hidden > 0 && (
-              <span className="flex h-6 items-center text-xs font-medium text-muted-foreground">
-                +{hidden} más
-              </span>
-            )}
-          </>
         )}
-      </span>
-    </button>
+        <span ref={listRef} className="mt-1 block min-h-0 flex-1 overflow-hidden">
+          {sorted.length === 0 ? (
+            <span className="flex h-6 items-center text-sm text-muted-foreground">
+              Sin tareas pendientes
+            </span>
+          ) : (
+            <>
+              {sorted.slice(0, shown).map((task) => (
+                <span key={task.id} className="flex h-6 items-center gap-1.5 text-sm">
+                  <PriorityMark priority={task.priority} />
+                  <span className="truncate">{task.title}</span>
+                </span>
+              ))}
+              {hidden > 0 && (
+                <span className="flex h-6 items-center text-xs font-medium text-muted-foreground">
+                  +{hidden} más
+                </span>
+              )}
+            </>
+          )}
+        </span>
+      </button>
+    </div>
   )
 }

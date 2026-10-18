@@ -64,84 +64,90 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
   }
 
   return (
-    <article
+    <div
       ref={drag?.setNodeRef}
-      style={{ ...noteStyle(area.color), ...drag?.style }}
+      style={drag?.style}
       {...drag?.listeners}
-      aria-label={`Área ${area.name}`}
-      className={cn(
-        'note paper group/postit flex min-h-64 flex-col gap-3 p-4 pt-5',
-        drag?.isDragging && 'relative z-20 scale-[1.02] opacity-90'
-      )}
+      className={cn('paper-shadow', drag?.isDragging && 'relative z-20 scale-[1.02] opacity-90')}
     >
-      <header className="group/zone flex items-start justify-between gap-2">
-        <h2 className="text-2xl leading-tight font-bold tracking-tight break-words">{area.name}</h2>
-        {/* Los iconos solo aparecen al pasar el cursor por el título (o al navegar con teclado). */}
-        <div className={HOVER_ACTIONS}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                aria-label={`Ordenar las tareas de ${area.name}`}
-                title={`Orden: ${criterionLabel}`}
-              >
-                <ArrowUpDown className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Ordenar tareas por</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={area.sortCriterion}
-                onValueChange={(value) => setSortCriterion(area.id, value as SortCriterion)}
-              >
-                {CRITERIA.map((c) => (
-                  <DropdownMenuRadioItem key={c.value} value={c.value}>
-                    {c.label}
-                  </DropdownMenuRadioItem>
+      <article
+        style={noteStyle(area.color)}
+        aria-label={`Área ${area.name}`}
+        className="note paper group/postit flex min-h-64 flex-col gap-3 p-4 pt-5"
+      >
+        <header className="group/zone flex items-start justify-between gap-2">
+          <h2 className="text-2xl leading-tight font-bold tracking-tight break-words">
+            {area.name}
+          </h2>
+          {/* Los iconos solo aparecen al pasar el cursor por el título (o al navegar con teclado). */}
+          <div className={HOVER_ACTIONS}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  aria-label={`Ordenar las tareas de ${area.name}`}
+                  title={`Orden: ${criterionLabel}`}
+                >
+                  <ArrowUpDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Ordenar tareas por</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={area.sortCriterion}
+                  onValueChange={(value) => setSortCriterion(area.id, value as SortCriterion)}
+                >
+                  {CRITERIA.map((c) => (
+                    <DropdownMenuRadioItem key={c.value} value={c.value}>
+                      {c.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <RowMenu
+              label={`el área ${area.name}`}
+              className="size-8"
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          </div>
+        </header>
+        {area.note && (
+          <p className="text-sm whitespace-pre-wrap break-words text-muted-foreground">
+            {area.note}
+          </p>
+        )}
+
+        {tasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sin tareas pendientes.</p>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleTaskDragEnd}
+          >
+            <SortableContext items={pendingIds} strategy={verticalListSortingStrategy}>
+              <ul className="grid gap-2 text-sm">
+                {pending.map((task) => (
+                  <SortableTask key={task.id} task={task} />
                 ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <RowMenu
-            label={`el área ${area.name}`}
-            className="size-8"
-            onEdit={onEdit}
-            onDelete={onDelete}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        )}
+
+        {/* El campo para añadir solo se ve al pasar el cursor por el post-it (o al usar el teclado). */}
+        <div className="mt-auto pt-2 opacity-0 transition-opacity group-focus-within/postit:opacity-100 group-hover/postit:opacity-100 motion-reduce:transition-none">
+          <QuickAdd
+            label={`Nueva tarea en ${area.name}`}
+            placeholder="Nueva tarea"
+            onAdd={(title) => addTask(area.id, title)}
           />
         </div>
-      </header>
-      {area.note && (
-        <p className="text-sm whitespace-pre-wrap break-words text-muted-foreground">{area.note}</p>
-      )}
-
-      {tasks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sin tareas pendientes.</p>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleTaskDragEnd}
-        >
-          <SortableContext items={pendingIds} strategy={verticalListSortingStrategy}>
-            <ul className="grid gap-2 text-sm">
-              {pending.map((task) => (
-                <SortableTask key={task.id} task={task} />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
-      )}
-
-      {/* El campo para añadir solo se ve al pasar el cursor por el post-it (o al usar el teclado). */}
-      <div className="mt-auto pt-2 opacity-0 transition-opacity group-focus-within/postit:opacity-100 group-hover/postit:opacity-100 motion-reduce:transition-none">
-        <QuickAdd
-          label={`Nueva tarea en ${area.name}`}
-          placeholder="Nueva tarea"
-          onAdd={(title) => addTask(area.id, title)}
-        />
-      </div>
-    </article>
+      </article>
+    </div>
   )
 }
