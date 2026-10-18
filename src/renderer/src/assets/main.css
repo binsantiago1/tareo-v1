@@ -81,53 +81,64 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Cursor propio en toda la app (la punta de la flecha está en el punto 5,4). */
+    cursor:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%' y='-30%' width='170%' height='170%'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-color='black' flood-opacity='0.35'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23s)' stroke-linejoin='round' stroke-linecap='round'%3E%3Cg fill='none' stroke='white' stroke-width='6'%3E%3Cpath d='M5 4 L6.5 22 L21 8.5 Z'/%3E%3Cpath d='M13.5 15.5 L22.5 26'/%3E%3C/g%3E%3Cpath d='M5 4 L6.5 22 L21 8.5 Z' fill='black' stroke='black' stroke-width='2'/%3E%3Cpath d='M13.5 15.5 L22.5 26' stroke='black' stroke-width='4.4' fill='none'/%3E%3C/g%3E%3C/svg%3E")
+        5 4,
+      default;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-size: 0.9375rem;
     line-height: 1.45;
+    /* Ningún texto se puede seleccionar, salvo el de los campos de texto. */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable='true'] {
+    -webkit-user-select: text;
+    user-select: text;
+    cursor: text;
+  }
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='date'],
+  input[type='range'] {
+    cursor:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%' y='-30%' width='170%' height='170%'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-color='black' flood-opacity='0.35'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23s)' stroke-linejoin='round' stroke-linecap='round'%3E%3Cg fill='none' stroke='white' stroke-width='6'%3E%3Cpath d='M5 4 L6.5 22 L21 8.5 Z'/%3E%3Cpath d='M13.5 15.5 L22.5 26'/%3E%3C/g%3E%3Cpath d='M5 4 L6.5 22 L21 8.5 Z' fill='black' stroke='black' stroke-width='2'/%3E%3Cpath d='M13.5 15.5 L22.5 26' stroke='black' stroke-width='4.4' fill='none'/%3E%3C/g%3E%3C/svg%3E")
+        5 4,
+      default;
   }
 }
 
 /*
- * Papel de post-it. El color de cada área llega con dos variables (--note-hue y --note-chroma)
- * que se ponen en línea en el elemento. Todo lo que hay dentro de un .note hereda tinta y
- * campos del mismo papel, así que el texto siempre tiene buen contraste (claro y oscuro).
+ * Papel de post-it. El color de cada área llega con cuatro variables (--note-bg, --note-ink,
+ * --note-alert y --note-alert-ink) que se ponen en línea en el elemento. Todo lo que hay dentro
+ * de un .note hereda esos colores como si fuera el tema de ese papel.
  */
 @layer components {
   .note {
-    --note-bg: oklch(0.93 var(--note-chroma, 0.12) var(--note-hue, 98));
-    --note-ink: oklch(0.24 0.02 var(--note-hue, 98));
-    --note-field: oklch(0.985 calc(var(--note-chroma, 0.12) * 0.25) var(--note-hue, 98));
-
     --foreground: var(--note-ink);
     --card: var(--note-bg);
     --card-foreground: var(--note-ink);
-    --field: var(--note-field);
+    --field: color-mix(in oklab, var(--note-ink) 8%, var(--note-bg));
     --primary: var(--note-ink);
     --primary-foreground: var(--note-bg);
-    --muted-foreground: color-mix(in oklab, var(--note-ink) 74%, var(--note-bg));
-    --border: color-mix(in oklab, var(--note-ink) 20%, transparent);
-    --input: color-mix(in oklab, var(--note-ink) 45%, transparent);
-    --accent: color-mix(in oklab, var(--note-ink) 12%, transparent);
+    --muted-foreground: color-mix(in oklab, var(--note-ink) 85%, var(--note-bg));
+    --border: color-mix(in oklab, var(--note-ink) 30%, transparent);
+    --input: color-mix(in oklab, var(--note-ink) 55%, transparent);
+    --accent: color-mix(in oklab, var(--note-ink) 14%, transparent);
     --accent-foreground: var(--note-ink);
-    --secondary: color-mix(in oklab, var(--note-ink) 12%, transparent);
+    --secondary: color-mix(in oklab, var(--note-ink) 14%, transparent);
     --secondary-foreground: var(--note-ink);
     --ring: var(--note-ink);
-    --destructive: oklch(0.47 0.2 27);
-    --destructive-foreground: oklch(1 0 0);
+    --destructive: var(--note-alert);
+    --destructive-foreground: var(--note-alert-ink);
 
     background-color: var(--note-bg);
     color: var(--note-ink);
-  }
-
-  .dark .note {
-    --note-bg: oklch(0.33 calc(var(--note-chroma, 0.12) * 0.7) var(--note-hue, 98));
-    --note-ink: oklch(0.96 0.012 var(--note-hue, 98));
-    --note-field: oklch(0.25 calc(var(--note-chroma, 0.12) * 0.5) var(--note-hue, 98));
-    --muted-foreground: color-mix(in oklab, var(--note-ink) 78%, var(--note-bg));
-    --destructive: oklch(0.8 0.15 25);
-    --destructive-foreground: oklch(0.15 0.01 260);
   }
 
   /* La hoja de papel: sombra suave en capas y el borde pegajoso de arriba, algo más oscuro. */
@@ -144,6 +155,17 @@
       inset 0 7px 6px -7px oklch(0 0 0 / 0.35),
       0 1px 1px oklch(0 0 0 / 0.4),
       0 8px 14px -8px oklch(0 0 0 / 0.7);
+  }
+
+  /* Tachado animado: la línea crece de izquierda a derecha al completar (clase strike-on). */
+  .strike {
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 2px;
+    transition: background-size 450ms ease-out;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .strike-on {
+    background-size: 100% 2px;
   }
 }
 

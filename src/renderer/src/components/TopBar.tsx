@@ -10,12 +10,23 @@ const VIEWS = [
   { value: 'calendario', label: 'Calendario', Icon: CalendarDays }
 ] as const
 
-/** Superficie común de los elementos flotantes: fondo blanco al 70% y sombra suave. */
+/** Superficie de la isla (y de la barra cuando se le pasa el cursor): fondo blanco al 70%. */
 const SURFACE = 'border bg-card/70 shadow-sm backdrop-blur-sm'
 
-/** Botón de icono pequeño de la barra (75% del tamaño anterior). */
-const BAR_BUTTON =
-  'flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none'
+/**
+ * Cuando hay un menú abierto desde la barra se mantiene el aspecto "con el cursor encima",
+ * aunque el cursor esté sobre el menú.
+ */
+const BAR_ON = 'group-hover/bar:opacity-100 group-has-[[data-state=open]]/bar:opacity-100'
+
+/** Botón de icono de la barra: atenuado hasta que se pasa el cursor por la barra. */
+const BAR_BUTTON = cn(
+  'relative z-10 flex size-9 items-center justify-center rounded-xl text-foreground opacity-50 transition-[opacity,background-color] hover:bg-accent focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none',
+  BAR_ON
+)
+
+/** Separación entre botones de las vistas (size-9 = 2.25rem + gap-1 = 0.25rem). */
+const VIEW_STEP_REM = 2.5
 
 interface Props {
   view: View
@@ -37,30 +48,46 @@ export function TopBar({
   onOpenBackup,
   onNewArea
 }: Props): React.JSX.Element {
+  const viewIndex = VIEWS.findIndex((v) => v.value === view)
+
   return (
     <header className="flex items-start justify-between gap-3 px-6 pt-4 pb-2">
-      {/* Isla: solo el icono; al pasar el cursor se despliega el nombre. */}
+      {/* Isla: solo el icono; al pasar el cursor se despliega (despacio) el nombre. */}
       <h1
         className={cn(
           SURFACE,
-          'group/brand flex h-8 items-center overflow-hidden rounded-full text-sm font-bold tracking-tight'
+          'group/brand flex h-11 items-center overflow-hidden rounded-full text-base font-bold tracking-tight'
         )}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
+        <span className="flex size-11 shrink-0 items-center justify-center" aria-hidden="true">
           <span
-            className="paper block size-4 rotate-[-4deg]"
-            style={{ backgroundColor: 'oklch(0.93 0.12 98)' }}
+            className="paper block size-5 rotate-[-4deg]"
+            style={{ backgroundColor: '#FFE680' }}
           />
         </span>
-        <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/brand:max-w-32 group-hover/brand:pr-3 group-hover/brand:opacity-100 motion-reduce:transition-none">
+        <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-700 ease-in-out group-hover/brand:max-w-40 group-hover/brand:pr-5 group-hover/brand:opacity-100 motion-reduce:transition-none">
           Pendientes
         </span>
       </h1>
 
-      {/* Una sola barra con tres secciones separadas por una línea vertical. */}
-      <div className={cn(SURFACE, 'flex h-8 items-center gap-1 rounded-xl px-1')}>
+      {/*
+        Una sola barra con tres secciones. En reposo es transparente (sin relleno ni contorno) y
+        sus iconos están atenuados; con el cursor encima aparece el rectángulo y los separadores.
+      */}
+      <div className="group/bar relative flex h-11 items-center gap-1 rounded-2xl border border-transparent px-1 transition-[background-color,border-color,box-shadow] duration-200 hover:border-border hover:bg-card/70 hover:shadow-sm hover:backdrop-blur-sm has-[[data-state=open]]:border-border has-[[data-state=open]]:bg-card/70 has-[[data-state=open]]:shadow-sm motion-reduce:transition-none">
+        {/* Selección de vista: un fondo oscuro que se desliza de una vista a otra. */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none absolute top-1 left-1 size-9 rounded-xl bg-primary opacity-0 transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none',
+            !archiveOpen &&
+              'group-hover/bar:opacity-100 group-has-[[data-state=open]]/bar:opacity-100'
+          )}
+          style={{ transform: `translateX(${Math.max(viewIndex, 0) * VIEW_STEP_REM}rem)` }}
+        />
+
         {/* 1. Vistas */}
-        <div role="group" aria-label="Vista" className="flex items-center gap-0.5">
+        <div role="group" aria-label="Vista" className="flex items-center gap-1">
           {VIEWS.map(({ value, label, Icon }) => {
             const active = !archiveOpen && view === value
             return (
@@ -73,17 +100,21 @@ export function TopBar({
                 onClick={() => onViewChange(value)}
                 className={cn(
                   BAR_BUTTON,
+                  'transition-colors',
                   active &&
-                    'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground'
+                    'opacity-100 group-hover/bar:text-primary-foreground group-has-[[data-state=open]]/bar:text-primary-foreground hover:bg-transparent'
                 )}
               >
-                <Icon className="size-[15px]" />
+                <Icon className="size-5" />
               </button>
             )
           })}
         </div>
 
-        <span className="h-4 w-px bg-border" aria-hidden="true" />
+        <span
+          className={cn('h-5 w-px bg-border opacity-0 transition-opacity', BAR_ON)}
+          aria-hidden="true"
+        />
 
         {/* 2. Nueva área */}
         <button
@@ -93,10 +124,13 @@ export function TopBar({
           onClick={onNewArea}
           className={BAR_BUTTON}
         >
-          <Plus className="size-[15px]" />
+          <Plus className="size-5" />
         </button>
 
-        <span className="h-4 w-px bg-border" aria-hidden="true" />
+        <span
+          className={cn('h-5 w-px bg-border opacity-0 transition-opacity', BAR_ON)}
+          aria-hidden="true"
+        />
 
         {/* 3. Configuración */}
         <SettingsMenu

@@ -1,42 +1,135 @@
 /**
- * Paleta de 20 colores de papel para los post-its.
- * `hue` y `chroma` se usan en CSS (oklch) para generar el tono claro y el oscuro de cada color.
+ * Colores de papel de los post-its: cada uno es una combinación de fondo y tipografía.
+ * `alert` / `alertInk` son el color de lo vencido (rojo legible sobre ese papel) y su texto.
  */
 export interface NoteColor {
   id: string
   label: string
-  hue: number
-  chroma: number
+  bg: string
+  ink: string
+  alert: string
+  alertInk: string
 }
 
 export const NOTE_COLORS: NoteColor[] = [
-  { id: 'amarillo', label: 'Amarillo', hue: 98, chroma: 0.12 },
-  { id: 'limon', label: 'Limón', hue: 118, chroma: 0.12 },
-  { id: 'lima', label: 'Lima', hue: 135, chroma: 0.11 },
-  { id: 'verde', label: 'Verde', hue: 152, chroma: 0.09 },
-  { id: 'menta', label: 'Menta', hue: 172, chroma: 0.07 },
-  { id: 'turquesa', label: 'Turquesa', hue: 192, chroma: 0.06 },
-  { id: 'celeste', label: 'Celeste', hue: 225, chroma: 0.05 },
-  { id: 'azul', label: 'Azul', hue: 252, chroma: 0.05 },
-  { id: 'indigo', label: 'Índigo', hue: 272, chroma: 0.05 },
-  { id: 'lavanda', label: 'Lavanda', hue: 292, chroma: 0.05 },
-  { id: 'violeta', label: 'Violeta', hue: 310, chroma: 0.06 },
-  { id: 'orquidea', label: 'Orquídea', hue: 330, chroma: 0.06 },
-  { id: 'rosa', label: 'Rosa', hue: 350, chroma: 0.06 },
-  { id: 'fucsia', label: 'Fucsia', hue: 3, chroma: 0.08 },
-  { id: 'coral', label: 'Coral', hue: 22, chroma: 0.08 },
-  { id: 'rojo', label: 'Rojo', hue: 30, chroma: 0.09 },
-  { id: 'naranja', label: 'Naranja', hue: 55, chroma: 0.1 },
-  { id: 'melocoton', label: 'Melocotón', hue: 70, chroma: 0.08 },
-  { id: 'arena', label: 'Arena', hue: 85, chroma: 0.04 },
-  { id: 'gris', label: 'Gris', hue: 250, chroma: 0.008 }
+  // Tradicional: el típico post-it amarillo con letras negras.
+  {
+    id: 'clasico',
+    label: 'Clásico',
+    bg: '#FFE680',
+    ink: '#111111',
+    alert: '#C4001A',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'dorado',
+    label: 'Dorado',
+    bg: '#FFD35F',
+    ink: '#FF0000',
+    alert: '#8F0010',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'lavanda',
+    label: 'Lavanda',
+    bg: '#D8C3E6',
+    ink: '#1B2BB4',
+    alert: '#A50014',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'naranja',
+    label: 'Naranja',
+    bg: '#F5853A',
+    ink: '#FEF8EE',
+    alert: '#6B0A0A',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'malva',
+    label: 'Malva',
+    bg: '#BC6E84',
+    ink: '#FEF8EE',
+    alert: '#3A000D',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'verde',
+    label: 'Verde',
+    bg: '#4F8B4E',
+    ink: '#FEF8EE',
+    alert: '#33000B',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'rojo',
+    label: 'Rojo',
+    bg: '#E0431F',
+    ink: '#FEF8EE',
+    alert: '#2E0008',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'celeste',
+    label: 'Celeste',
+    bg: '#A1D1FD',
+    ink: '#1B2BB4',
+    alert: '#A50014',
+    alertInk: '#FFFFFF'
+  },
+  {
+    id: 'azul',
+    label: 'Azul',
+    bg: '#2B61EB',
+    ink: '#FEF8EE',
+    alert: '#FFD0D0',
+    alertInk: '#4A0010'
+  },
+  {
+    id: 'marino',
+    label: 'Marino',
+    bg: '#0F1F5C',
+    ink: '#FFFFFF',
+    alert: '#FF8A8A',
+    alertInk: '#3A0010'
+  }
 ]
 
-export const DEFAULT_NOTE_COLOR = 'amarillo'
+export const DEFAULT_NOTE_COLOR = 'clasico'
 
-/** Devuelve el color pedido, o el amarillo si no existe (por ejemplo, áreas antiguas sin color). */
+/** Ids de la paleta anterior (20 colores) → color más parecido de la nueva. */
+const LEGACY_COLORS: Record<string, string> = {
+  amarillo: 'clasico',
+  limon: 'dorado',
+  lima: 'verde',
+  verde: 'verde',
+  menta: 'verde',
+  turquesa: 'celeste',
+  celeste: 'celeste',
+  azul: 'azul',
+  indigo: 'azul',
+  lavanda: 'lavanda',
+  violeta: 'lavanda',
+  orquidea: 'malva',
+  rosa: 'malva',
+  fucsia: 'malva',
+  coral: 'rojo',
+  rojo: 'rojo',
+  naranja: 'naranja',
+  melocoton: 'naranja',
+  arena: 'clasico',
+  gris: 'marino'
+}
+
+/**
+ * Devuelve el color pedido. Los ids de la paleta anterior se traducen al más parecido
+ * (así los datos antiguos se ven bien) y lo desconocido o vacío es el clásico.
+ */
 export function noteColorOf(id: string | undefined): NoteColor {
-  return NOTE_COLORS.find((c) => c.id === id) ?? NOTE_COLORS[0]
+  const exact = NOTE_COLORS.find((c) => c.id === id)
+  if (exact) return exact
+  const migrated = id !== undefined ? LEGACY_COLORS[id] : undefined
+  return NOTE_COLORS.find((c) => c.id === migrated) ?? NOTE_COLORS[0]
 }
 
 /** Primer color que ninguna otra área está usando; si se usan todos, vuelve a empezar. */

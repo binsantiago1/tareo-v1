@@ -3,6 +3,7 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { ListPlus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
+import { Checkbox } from '@renderer/components/ui/checkbox'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { ItemDialog } from '@renderer/components/ItemDialog'
 import { PriorityMark } from '@renderer/components/PriorityMark'
@@ -56,9 +57,7 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
       className={cn('grid gap-1 bg-card', drag?.isDragging && 'relative z-10 rounded shadow-md')}
     >
       <div className="group/zone flex items-start gap-2">
-        <input
-          type="checkbox"
-          className="mt-1 size-4 shrink-0 accent-primary"
+        <Checkbox
           checked={task.completed}
           disabled={hasSubtasks}
           aria-label={`Completar «${task.title}»`}
@@ -68,7 +67,11 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
-              className={cn('break-words', task.completed && 'text-muted-foreground line-through')}
+              className={cn(
+                'strike break-words',
+                task.completed && 'strike-on text-muted-foreground',
+                overdue && 'font-semibold text-destructive'
+              )}
             >
               {task.title}
             </span>
@@ -125,7 +128,7 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
           <SortableContext items={subtaskIds} strategy={verticalListSortingStrategy}>
             <ul className="ml-6 grid gap-1 border-l pl-3">
               {task.subtasks.map((sub) => (
-                <SortableSubtask key={sub.id} task={task} subtask={sub} />
+                <SortableSubtask key={sub.id} task={task} subtask={sub} overdue={overdue} />
               ))}
               {addingSubtask && (
                 <li>

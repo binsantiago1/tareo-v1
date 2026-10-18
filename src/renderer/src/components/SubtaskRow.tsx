@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
+import { Checkbox } from '@renderer/components/ui/checkbox'
 import { ItemDialog } from '@renderer/components/ItemDialog'
 import { RowMenu } from '@renderer/components/RowMenu'
 import { HOVER_ACTIONS } from '@renderer/lib/hoverActions'
@@ -20,11 +21,13 @@ export interface RowDrag {
 interface Props {
   task: Task
   subtask: Subtask
+  /** La tarea está vencida: sus subtareas pendientes también se ven en rojo. */
+  overdue?: boolean
   drag?: RowDrag
 }
 
 /** Una subtarea: casilla, texto y menú de tres puntos (que aparece al pasar el cursor). */
-export function SubtaskRow({ task, subtask, drag }: Props): React.JSX.Element {
+export function SubtaskRow({ task, subtask, overdue, drag }: Props): React.JSX.Element {
   const toggleSubtask = useDataStore((s) => s.toggleSubtask)
   const updateSubtask = useDataStore((s) => s.updateSubtask)
   const removeSubtask = useDataStore((s) => s.removeSubtask)
@@ -41,16 +44,18 @@ export function SubtaskRow({ task, subtask, drag }: Props): React.JSX.Element {
         drag?.isDragging && 'relative z-10 rounded shadow-md'
       )}
     >
-      <input
-        type="checkbox"
-        className="mt-1 size-4 shrink-0 accent-primary"
+      <Checkbox
         checked={subtask.completed}
         aria-label={`Completar subtarea «${subtask.title}»`}
         onChange={() => toggleSubtask(task.id, subtask.id)}
       />
       <div className="min-w-0 flex-1 text-sm">
         <span
-          className={cn('break-words', subtask.completed && 'text-muted-foreground line-through')}
+          className={cn(
+            'strike break-words',
+            subtask.completed && 'strike-on text-muted-foreground',
+            overdue && !subtask.completed && 'font-semibold text-destructive'
+          )}
         >
           {subtask.title}
         </span>
@@ -92,7 +97,7 @@ export function SubtaskRow({ task, subtask, drag }: Props): React.JSX.Element {
 }
 
 /** Subtarea que se puede mover de sitio manteniendo pulsado el clic. */
-export function SortableSubtask({ task, subtask }: Props): React.JSX.Element {
+export function SortableSubtask({ task, subtask, overdue }: Props): React.JSX.Element {
   const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: subtask.id
   })
@@ -100,6 +105,7 @@ export function SortableSubtask({ task, subtask }: Props): React.JSX.Element {
     <SubtaskRow
       task={task}
       subtask={subtask}
+      overdue={overdue}
       drag={{
         setNodeRef,
         isDragging,

@@ -32,7 +32,8 @@ function App(): React.JSX.Element {
     addArea,
     updateArea,
     removeArea,
-    reorderAreas
+    reorderAreas,
+    lingering
   } = useDataStore()
   const sensors = useLongPressSensors()
   const [view, setView] = useState<View>('lista')
@@ -49,6 +50,9 @@ function App(): React.JSX.Element {
   }, [init])
 
   const areas = useMemo(() => [...data.areas].sort((a, b) => a.order - b.order), [data.areas])
+  // En el post-it también se ven (tachadas) las tareas recién completadas, unos segundos.
+  const visibleOf = (areaId: string): typeof data.tasks =>
+    data.tasks.filter((t) => t.areaId === areaId && (!t.completed || t.id in lingering))
   const pendingOf = (areaId: string): typeof data.tasks =>
     data.tasks.filter((t) => t.areaId === areaId && !t.completed)
   const deletingTasks = deleting ? data.tasks.filter((t) => t.areaId === deleting.id) : []
@@ -127,7 +131,7 @@ function App(): React.JSX.Element {
                   <SortablePostIt
                     key={area.id}
                     area={area}
-                    tasks={pendingOf(area.id)}
+                    tasks={visibleOf(area.id)}
                     onEdit={() => setEditing(area)}
                     onDelete={() => setDeleting(area)}
                   />
@@ -180,7 +184,7 @@ function App(): React.JSX.Element {
           {openArea && (
             <PostIt
               area={openArea}
-              tasks={pendingOf(openArea.id)}
+              tasks={visibleOf(openArea.id)}
               onEdit={() => setEditing(openArea)}
               onDelete={() => setDeleting(openArea)}
             />

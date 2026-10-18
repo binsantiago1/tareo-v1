@@ -35,9 +35,9 @@ export function SettingsMenu({
           type="button"
           aria-label="Configuración"
           title="Configuración"
-          className={cn(buttonClass, open && 'bg-accent text-foreground')}
+          className={cn(buttonClass, open && 'bg-accent')}
         >
-          <Settings className="size-[15px]" />
+          <Settings className="size-5" />
         </button>
       </PopoverTrigger>
       <PopoverContent aria-label="Configuración">

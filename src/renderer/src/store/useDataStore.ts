@@ -45,6 +45,11 @@ interface DataState {
   saveError?: string
   /** Última tarea completada, para ofrecer "Deshacer" unos segundos. */
   undo?: { key: number; title: string; taskId: string; subtaskId?: string }
+  /**
+   * Tareas recién completadas que siguen a la vista (tachadas) unos segundos antes de pasar
+   * al Archivo. Guarda el id de la tarea y la marca de la completación.
+   */
+  lingering: Record<string, number>
   init: () => Promise<void>
   dismissWarning: () => void
   /** Sustituye todos los datos (al importar una copia de seguridad). */
@@ -73,12 +78,32 @@ interface DataState {
   toggleSubtask: (taskId: string, subtaskId: string) => void
 }
 
+/** Tiempo que una tarea completada sigue a la vista (con el aviso "Deshacer"). */
+const LINGER_MS = 5000
+
+function withoutKey(record: Record<string, number>, key: string): Record<string, number> {
+  const copy = { ...record }
+  delete copy[key]
+  return copy
+}
+
 export const useDataStore = create<DataState>((set, get) => {
   const now = (): string => new Date().toISOString()
 
   /** Muestra el aviso "Deshacer" tras completar una tarea. */
   const offerUndo = (task: Task, subtaskId?: string): void => {
-    set({ undo: { key: Date.now(), title: task.title, taskId: task.id, subtaskId } })
+    const key = Date.now()
+    set({
+      undo: { key, title: task.title, taskId: task.id, subtaskId },
+      lingering: { ...get().lingering, [task.id]: key }
+    })
+    // Pasado el tiempo, la tarea desaparece del post-it a la vez que el aviso "Deshacer".
+    setTimeout(() => {
+      const state = get()
+      const lingering = { ...state.lingering }
+      if (lingering[task.id] === key) delete lingering[task.id]
+      set({ lingering, undo: state.undo?.key === key ? undefined : state.undo })
+    }, LINGER_MS)
   }
 
   /** Cambia una tarea concreta, dejando el resto igual. */
@@ -90,6 +115,7 @@ export const useDataStore = create<DataState>((set, get) => {
   return {
     data: createEmptyData(),
     loaded: false,
+    lingering: {},
 
     init: async () => {
       const { data, warning } = await window.api.loadData()
@@ -98,7 +124,7 @@ export const useDataStore = create<DataState>((set, get) => {
 
     dismissWarning: () => set({ warning: undefined }),
 
-    replaceData: (data) => set({ data, undo: undefined }),
+    replaceData: (data) => set({ data, undo: undefined, lingering: {} }),
 
     addArea: ({ name, note, color }) => {
       const { data } = get()
@@ -218,7 +244,7 @@ export const useDataStore = create<DataState>((set, get) => {
     undoCompletion: () => {
       const undo = get().undo
       if (!undo) return
-      set({ undo: undefined })
+      set({ undo: undefined, lingering: withoutKey(get().lingering, undo.taskId) })
       if (undo.subtaskId) {
         changeTask(undo.taskId, (t) => toggleSubtaskCompleted(t, undo.subtaskId!, now()))
       } else {
@@ -226,7 +252,13 @@ export const useDataStore = create<DataState>((set, get) => {
       }
     },
 
-    dismissUndo: () => set({ undo: undefined }),
+    dismissUndo: () => {
+      const undo = get().undo
+      set({
+        undo: undefined,
+        lingering: undo ? withoutKey(get().lingering, undo.taskId) : get().lingering
+      })
+    },
 
     addSubtask: (taskId, title) =>
       changeTask(taskId, (t) =>

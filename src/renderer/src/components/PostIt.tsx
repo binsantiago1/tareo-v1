@@ -70,7 +70,7 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
       {...drag?.listeners}
       aria-label={`Área ${area.name}`}
       className={cn(
-        'note paper flex min-h-64 flex-col gap-3 p-4 pt-5',
+        'note paper group/postit flex min-h-64 flex-col gap-3 p-4 pt-5',
         drag?.isDragging && 'relative z-20 scale-[1.02] opacity-90'
       )}
     >
@@ -134,7 +134,8 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
         </DndContext>
       )}
 
-      <div className="mt-auto pt-2">
+      {/* El campo para añadir solo se ve al pasar el cursor por el post-it (o al usar el teclado). */}
+      <div className="mt-auto pt-2 opacity-0 transition-opacity group-focus-within/postit:opacity-100 group-hover/postit:opacity-100 motion-reduce:transition-none">
         <QuickAdd
           label={`Nueva tarea en ${area.name}`}
           placeholder="Nueva tarea"
