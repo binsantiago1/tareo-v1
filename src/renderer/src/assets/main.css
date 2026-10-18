@@ -221,6 +221,21 @@
   }
 }
 
+/* Post-it de escritorio: ventana sin marco y transparente. */
+html.widget,
+html.widget body {
+  background: transparent;
+  overflow-x: hidden;
+}
+
+/* Zonas de la ventana flotante: el título sirve para moverla; lo demás no. */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

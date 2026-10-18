@@ -1,10 +1,11 @@
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Pin, PinOff, X } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -33,8 +34,11 @@ interface Props {
   area: Area
   tasks: Task[]
   drag?: PostItDrag
+  /** Si se pasa, es el post-it de escritorio: tiene una X (al pasar el cursor) que lo quita del escritorio. */
+  widget?: { onClose: () => void }
   onEdit: () => void
-  onDelete: () => void
+  /** Si no se pasa, el menú del área no ofrece "Borrar" (en el post-it de escritorio no se borra). */
+  onDelete?: () => void
 }
 
 const CRITERIA: { value: SortCriterion; label: string }[] = [
@@ -44,10 +48,12 @@ const CRITERIA: { value: SortCriterion; label: string }[] = [
   { value: 'personalizado', label: 'Personalizado' }
 ]
 
-export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JSX.Element {
+export function PostIt({ area, tasks, drag, widget, onEdit, onDelete }: Props): React.JSX.Element {
   const addTask = useDataStore((s) => s.addTask)
   const setSortCriterion = useDataStore((s) => s.setSortCriterion)
   const reorderTasks = useDataStore((s) => s.reorderTasks)
+  const togglePin = useDataStore((s) => s.togglePin)
+  const isPinned = useDataStore((s) => s.pinned.includes(area.id))
   const sensors = useLongPressSensors()
 
   // `tasks` solo trae las pendientes: las completadas están en el Archivo.
@@ -73,14 +79,36 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
       <article
         style={noteStyle(area.color)}
         aria-label={`Área ${area.name}`}
-        className="note paper group/postit flex min-h-64 flex-col gap-3 p-4 pt-5"
+        className={cn(
+          'note paper group/postit flex flex-col gap-3 p-4 pt-5',
+          widget ? 'min-h-40' : 'min-h-64'
+        )}
       >
-        <header className="group/zone flex items-start justify-between gap-2">
-          <h2 className="text-2xl leading-tight font-bold tracking-tight break-words">
+        {widget && (
+          <button
+            type="button"
+            aria-label="Quitar del escritorio"
+            title="Quitar del escritorio"
+            onClick={widget.onClose}
+            className="no-drag absolute top-1.5 right-1.5 z-10 flex size-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within/postit:opacity-100 group-hover/postit:opacity-100 hover:bg-accent focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+        <header
+          className={cn('group/zone flex items-start justify-between gap-2', widget && 'pr-6')}
+        >
+          {/* En el post-it de escritorio el título sirve para arrastrar la ventana. */}
+          <h2
+            className={cn(
+              'text-2xl leading-tight font-bold tracking-tight break-words',
+              widget && 'drag-region'
+            )}
+          >
             {area.name}
           </h2>
           {/* Los iconos solo aparecen al pasar el cursor por el título (o al navegar con teclado). */}
-          <div className={HOVER_ACTIONS}>
+          <div className={cn(HOVER_ACTIONS, widget && 'no-drag')}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -112,7 +140,12 @@ export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JS
               className="size-8"
               onEdit={onEdit}
               onDelete={onDelete}
-            />
+            >
+              <DropdownMenuItem onSelect={() => togglePin(area.id)}>
+                {isPinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+                {isPinned ? 'Quitar del escritorio' : 'Poner en el escritorio'}
+              </DropdownMenuItem>
+            </RowMenu>
           </div>
         </header>
         {area.note && (

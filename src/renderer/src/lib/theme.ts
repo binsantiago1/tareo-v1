@@ -49,6 +49,15 @@ export function useTheme(): { dark: boolean; setDark: (dark: boolean) => void } 
     document.documentElement.classList.toggle('dark', dark)
   }, [dark])
 
+  // Si el tema se cambia en otra ventana (por ejemplo, la principal), este también lo sigue.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent): void => {
+      if (event.key === STORAGE_KEY) setPreference(readThemePreference())
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   useEffect(() => {
     // Mientras no se haya elegido, la app sigue los cambios de modo de Windows.
     const media = window.matchMedia(DARK_QUERY)

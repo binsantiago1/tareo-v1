@@ -66,6 +66,17 @@ export interface DataApi {
   exportBackup: (data: AppData) => Promise<ExportResult>
   /** Abre "Abrir archivo", valida la copia y la devuelve (no la aplica por sí sola). */
   importBackup: () => Promise<ImportResult>
+  /** Avisa cuando OTRA ventana de la app (la principal o un post-it de escritorio) cambió los datos. */
+  onRemoteData: (callback: (data: AppData) => void) => () => void
+  /** Ids de las áreas que están fijadas en el escritorio. */
+  listWidgets: () => Promise<string[]>
+  onWidgetsChanged: (callback: (areaIds: string[]) => void) => () => void
+  /** Pone el post-it de un área en el escritorio (ventana flotante que se recuerda al reiniciar). */
+  pinWidget: (areaId: string) => Promise<void>
+  /** Quita el post-it del escritorio (el área no se borra). */
+  unpinWidget: (areaId: string) => Promise<void>
+  /** Un post-it de escritorio pide que su ventana tenga esta altura (en píxeles). */
+  setWidgetHeight: (height: number) => void
 }
 
 export type ExportResult =

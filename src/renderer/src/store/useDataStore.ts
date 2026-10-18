@@ -56,7 +56,11 @@ interface DataState {
   areaUndo?: { key: number; area: Area; tasks: Task[] }
   /** El aviso de área borrada está haciendo su animación de salida. */
   areaUndoLeaving: boolean
+  /** Ids de las áreas que están fijadas en el escritorio como post-it flotante. */
+  pinned: string[]
   init: () => Promise<void>
+  /** Pone o quita el post-it de un área en el escritorio. */
+  togglePin: (areaId: string) => void
   dismissWarning: () => void
   /** Sustituye todos los datos (al importar una copia de seguridad). */
   replaceData: (data: AppData) => void
@@ -85,6 +89,10 @@ interface DataState {
   reorderSubtasks: (taskId: string, orderedIds: string[]) => void
   toggleSubtask: (taskId: string, subtaskId: string) => void
 }
+
+// Estado interno del guardado y de la escucha de otras ventanas.
+let listening = false
+let skipNextSave = false
 
 /** Tiempo que una tarea completada sigue a la vista (con el aviso "Deshacer"). */
 const LINGER_MS = 5000
@@ -140,9 +148,26 @@ export const useDataStore = create<DataState>((set, get) => {
     leaving: {},
     areaUndoLeaving: false,
 
+    pinned: [],
+
     init: async () => {
       const { data, warning } = await window.api.loadData()
       set({ data, warning, loaded: true })
+      // Se escuchan los cambios que hacen las otras ventanas (principal y post-its de escritorio).
+      if (!listening) {
+        listening = true
+        window.api.onRemoteData((remote) => {
+          skipNextSave = true // viene de otra ventana, que ya lo guardó
+          set({ data: remote })
+        })
+        window.api.onWidgetsChanged((ids) => set({ pinned: ids }))
+      }
+      set({ pinned: await window.api.listWidgets() })
+    },
+
+    togglePin: (areaId) => {
+      if (get().pinned.includes(areaId)) void window.api.unpinWidget(areaId)
+      else void window.api.pinWidget(areaId)
     },
 
     dismissWarning: () => set({ warning: undefined }),
@@ -364,6 +389,10 @@ export const useDataStore = create<DataState>((set, get) => {
 // Guardado automático: cada vez que cambian los datos (ya cargados), se guardan.
 useDataStore.subscribe((state, prev) => {
   if (!state.loaded || state.data === prev.data) return
+  if (skipNextSave) {
+    skipNextSave = false
+    return
+  }
   window.api
     .saveData(state.data)
     .then(() => useDataStore.setState({ saveError: undefined }))

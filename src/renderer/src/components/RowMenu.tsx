@@ -12,12 +12,21 @@ interface Props {
   /** Qué es (para lectores de pantalla), por ejemplo «Comprar pan». */
   label: string
   onEdit: () => void
-  onDelete: () => void
+  /** Si no se pasa, el menú no ofrece "Borrar". */
+  onDelete?: () => void
+  /** Elementos del menú que van antes de "Editar". */
+  children?: React.ReactNode
   className?: string
 }
 
 /** Icono de tres puntos verticales con "Editar" y "Borrar". */
-export function RowMenu({ label, onEdit, onDelete, className }: Props): React.JSX.Element {
+export function RowMenu({
+  label,
+  onEdit,
+  onDelete,
+  children,
+  className
+}: Props): React.JSX.Element {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -32,14 +41,17 @@ export function RowMenu({ label, onEdit, onDelete, className }: Props): React.JS
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        {children}
         <DropdownMenuItem onSelect={onEdit}>
           <Pencil className="size-4" />
           Editar
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
-          <Trash2 className="size-4" />
-          Borrar
-        </DropdownMenuItem>
+        {onDelete && (
+          <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
+            <Trash2 className="size-4" />
+            Borrar
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
