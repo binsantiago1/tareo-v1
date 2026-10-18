@@ -11,12 +11,13 @@ import { QuickAdd } from '@renderer/components/QuickAdd'
 import { RowMenu } from '@renderer/components/RowMenu'
 import { SortableSubtask } from '@renderer/components/SubtaskRow'
 import type { RowDrag } from '@renderer/components/SubtaskRow'
-import { formatDueDate, todayString } from '@renderer/lib/dates'
+import { formatDaysLeft, formatDueDate, todayString } from '@renderer/lib/dates'
+import { OVERDUE_NAME } from '@renderer/lib/urgency'
 import { useLongPressSensors } from '@renderer/lib/dnd'
 import { HOVER_ACTIONS } from '@renderer/lib/hoverActions'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
-import { isOverdue } from '../../../shared/taskRules'
+import { daysUntil, isOverdue } from '../../../shared/taskRules'
 import type { Task } from '../../../shared/types'
 
 interface Props {
@@ -70,26 +71,28 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
               className={cn(
                 'strike break-words',
                 task.completed && 'strike-on text-muted-foreground',
-                overdue && 'font-semibold text-destructive'
+                overdue && OVERDUE_NAME
               )}
             >
               {task.title}
             </span>
             <PriorityMark priority={task.priority} />
-            {hasSubtasks && (
-              <span className="text-xs text-muted-foreground">
-                {doneCount}/{task.subtasks.length}
-              </span>
-            )}
-            {task.dueDate && (
+            {task.dueDate && !task.completed && (
               <span
+                title={`Fecha límite: ${formatDueDate(task.dueDate)}`}
                 className={cn(
                   'text-xs',
                   overdue ? 'font-semibold text-destructive' : 'text-muted-foreground'
                 )}
               >
-                {overdue ? 'Vencida: ' : 'Vence: '}
-                {formatDueDate(task.dueDate)}
+                {overdue
+                  ? `Vencida: ${formatDueDate(task.dueDate)}`
+                  : formatDaysLeft(daysUntil(task.dueDate, todayString()))}
+              </span>
+            )}
+            {hasSubtasks && (
+              <span className="text-xs text-muted-foreground">
+                {doneCount}/{task.subtasks.length}
               </span>
             )}
           </div>

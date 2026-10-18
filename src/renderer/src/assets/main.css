@@ -28,6 +28,9 @@
   --input: oklch(0.78 0.01 250);
   --ring: oklch(0.45 0.1 260);
   --radius: 0.5rem;
+  /* Rojo de lo urgente y lo vencido: el mismo sobre cualquier color de post-it. */
+  --urgent: #c4001a;
+  --urgent-foreground: #ffffff;
 }
 
 /* Modo oscuro: escritorio casi negro azulado. */
@@ -70,6 +73,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-urgent: var(--urgent);
+  --color-urgent-foreground: var(--urgent-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

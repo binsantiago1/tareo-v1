@@ -4,9 +4,10 @@ import type { Priority } from '../../../shared/types'
 
 const STYLES: Record<Priority, string> = {
   0: '',
+  // ! y !! se ven igual (contorno neutro); !!! lleva el contenedor relleno de rojo.
   1: 'border-border text-foreground',
-  2: 'border-destructive text-destructive',
-  3: 'border-destructive bg-destructive text-destructive-foreground'
+  2: 'border-border text-foreground',
+  3: 'border-transparent bg-urgent text-urgent-foreground ring-1 ring-white/50'
 }
 
 /** Muestra !, !! o !!! (nada si no hay prioridad). */

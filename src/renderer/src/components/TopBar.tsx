@@ -10,8 +10,8 @@ const VIEWS = [
   { value: 'calendario', label: 'Calendario', Icon: CalendarDays }
 ] as const
 
-/** Superficie de la isla (y de la barra cuando se le pasa el cursor): fondo blanco al 70%. */
-const SURFACE = 'border bg-card/70 shadow-sm backdrop-blur-sm'
+/** Aspecto con el cursor encima (isla y barra): contorno, fondo blanco al 70% y sombra suave. */
+const HOVER_SURFACE = 'hover:border-border hover:bg-card/70 hover:shadow-sm hover:backdrop-blur-sm'
 
 /**
  * Cuando hay un menú abierto desde la barra se mantiene el aspecto "con el cursor encima",
@@ -52,11 +52,14 @@ export function TopBar({
 
   return (
     <header className="flex items-start justify-between gap-3 px-6 pt-4 pb-2">
-      {/* Isla: solo el icono; al pasar el cursor se despliega (despacio) el nombre. */}
+      {/*
+        Isla: solo el icono, en un rectángulo como el de la barra. Sin relleno ni contorno hasta
+        que se le pasa el cursor; entonces aparece el rectángulo y se despliega (despacio) el nombre.
+      */}
       <h1
         className={cn(
-          SURFACE,
-          'group/brand flex h-11 items-center overflow-hidden rounded-full text-base font-bold tracking-tight'
+          HOVER_SURFACE,
+          'group/brand flex h-11 items-center overflow-hidden rounded-2xl border border-transparent text-base font-bold tracking-tight transition-[background-color,border-color,box-shadow] duration-200 motion-reduce:transition-none'
         )}
       >
         <span className="flex size-11 shrink-0 items-center justify-center" aria-hidden="true">

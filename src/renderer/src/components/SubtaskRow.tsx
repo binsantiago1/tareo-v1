@@ -6,6 +6,7 @@ import { Checkbox } from '@renderer/components/ui/checkbox'
 import { ItemDialog } from '@renderer/components/ItemDialog'
 import { RowMenu } from '@renderer/components/RowMenu'
 import { HOVER_ACTIONS } from '@renderer/lib/hoverActions'
+import { OVERDUE_NAME } from '@renderer/lib/urgency'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
 import type { Subtask, Task } from '../../../shared/types'
@@ -54,7 +55,7 @@ export function SubtaskRow({ task, subtask, overdue, drag }: Props): React.JSX.E
           className={cn(
             'strike break-words',
             subtask.completed && 'strike-on text-muted-foreground',
-            overdue && !subtask.completed && 'font-semibold text-destructive'
+            overdue && !subtask.completed && OVERDUE_NAME
           )}
         >
           {subtask.title}

@@ -57,3 +57,12 @@ export function restoreTask(task: Task): Task {
 export function isOverdue(dueDate: string | undefined, today: string): boolean {
   return dueDate !== undefined && dueDate < today
 }
+
+/** Días que faltan para una fecha límite ("YYYY-MM-DD"): lunes 1 → viernes 5 = 4. Negativo si ya venció. */
+export function daysUntil(dueDate: string, today: string): number {
+  const toUtc = (iso: string): number => {
+    const [y, m, d] = iso.split('-').map(Number)
+    return Date.UTC(y, m - 1, d)
+  }
+  return Math.round((toUtc(dueDate) - toUtc(today)) / 86_400_000)
+}

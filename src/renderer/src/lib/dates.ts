@@ -15,3 +15,9 @@ export function formatCompletedDate(iso: string): string {
 export function formatDueDate(dueDate: string): string {
   return format(parseISO(dueDate), 'd MMM', { locale: es })
 }
+
+/** Texto del contador de días restantes: «Hoy», «1 día», «4 días». */
+export function formatDaysLeft(days: number): string {
+  if (days <= 0) return 'Hoy'
+  return days === 1 ? '1 día' : `${days} días`
+}

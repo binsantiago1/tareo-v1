@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import {
   Dialog,
@@ -141,10 +142,13 @@ function ItemForm({
               <Button
                 type="button"
                 variant="outline"
+                size="icon"
                 disabled={!dueDate}
+                aria-label="Quitar fecha"
+                title="Quitar fecha"
                 onClick={() => setDueDate('')}
               >
-                Quitar fecha
+                <X className="size-4" />
               </Button>
             </div>
           </div>
