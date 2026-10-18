@@ -50,6 +50,12 @@ interface DataState {
    * al Archivo. Guarda el id de la tarea y la marca de la completación.
    */
   lingering: Record<string, number>
+  /** Tareas de `lingering` que ya están haciendo su animación de salida. */
+  leaving: Record<string, boolean>
+  /** Última área borrada (con sus tareas), para ofrecer "Deshacer" unos segundos. */
+  areaUndo?: { key: number; area: Area; tasks: Task[] }
+  /** El aviso de área borrada está haciendo su animación de salida. */
+  areaUndoLeaving: boolean
   init: () => Promise<void>
   dismissWarning: () => void
   /** Sustituye todos los datos (al importar una copia de seguridad). */
@@ -69,6 +75,8 @@ interface DataState {
   /** Saca una tarea del Archivo y la deja pendiente. */
   restoreTask: (id: string) => void
   undoCompletion: () => void
+  undoAreaDelete: () => void
+  dismissAreaUndo: () => void
   dismissUndo: () => void
   addSubtask: (taskId: string, title: string) => void
   updateSubtask: (taskId: string, subtaskId: string, values: SubtaskValues) => void
@@ -80,8 +88,12 @@ interface DataState {
 
 /** Tiempo que una tarea completada sigue a la vista (con el aviso "Deshacer"). */
 const LINGER_MS = 5000
+/** Duración de la animación de salida (tarea y avisos). */
+const EXIT_MS = 350
+/** Tiempo para deshacer el borrado de un área. */
+const AREA_UNDO_MS = 8000
 
-function withoutKey(record: Record<string, number>, key: string): Record<string, number> {
+function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T> {
   const copy = { ...record }
   delete copy[key]
   return copy
@@ -97,12 +109,21 @@ export const useDataStore = create<DataState>((set, get) => {
       undo: { key, title: task.title, taskId: task.id, subtaskId },
       lingering: { ...get().lingering, [task.id]: key }
     })
-    // Pasado el tiempo, la tarea desaparece del post-it a la vez que el aviso "Deshacer".
+    // Pasado el tiempo, la tarea y el aviso "Deshacer" se van a la vez, con una animación.
     setTimeout(() => {
-      const state = get()
-      const lingering = { ...state.lingering }
-      if (lingering[task.id] === key) delete lingering[task.id]
-      set({ lingering, undo: state.undo?.key === key ? undefined : state.undo })
+      if (get().lingering[task.id] !== key) return
+      set({ leaving: { ...get().leaving, [task.id]: true } })
+      setTimeout(() => {
+        const state = get()
+        if (state.lingering[task.id] !== key) return
+        const leaving = { ...state.leaving }
+        delete leaving[task.id]
+        set({
+          lingering: withoutKey(state.lingering, task.id),
+          leaving,
+          undo: state.undo?.key === key ? undefined : state.undo
+        })
+      }, EXIT_MS)
     }, LINGER_MS)
   }
 
@@ -116,6 +137,8 @@ export const useDataStore = create<DataState>((set, get) => {
     data: createEmptyData(),
     loaded: false,
     lingering: {},
+    leaving: {},
+    areaUndoLeaving: false,
 
     init: async () => {
       const { data, warning } = await window.api.loadData()
@@ -124,7 +147,15 @@ export const useDataStore = create<DataState>((set, get) => {
 
     dismissWarning: () => set({ warning: undefined }),
 
-    replaceData: (data) => set({ data, undo: undefined, lingering: {} }),
+    replaceData: (data) =>
+      set({
+        data,
+        undo: undefined,
+        lingering: {},
+        leaving: {},
+        areaUndo: undefined,
+        areaUndoLeaving: false
+      }),
 
     addArea: ({ name, note, color }) => {
       const { data } = get()
@@ -154,14 +185,45 @@ export const useDataStore = create<DataState>((set, get) => {
 
     removeArea: (id) => {
       const { data } = get()
+      const area = data.areas.find((a) => a.id === id)
+      const key = Date.now()
       set({
         data: {
           ...data,
           areas: data.areas.filter((a) => a.id !== id),
           tasks: data.tasks.filter((t) => t.areaId !== id)
-        }
+        },
+        // Se guarda el área con todas sus tareas para poder deshacer el borrado unos segundos.
+        areaUndo: area
+          ? { key, area, tasks: data.tasks.filter((t) => t.areaId === id) }
+          : undefined,
+        areaUndoLeaving: false
+      })
+      if (!area) return
+      setTimeout(() => {
+        if (get().areaUndo?.key !== key) return
+        set({ areaUndoLeaving: true })
+        setTimeout(() => {
+          if (get().areaUndo?.key === key) set({ areaUndo: undefined, areaUndoLeaving: false })
+        }, EXIT_MS)
+      }, AREA_UNDO_MS)
+    },
+
+    undoAreaDelete: () => {
+      const { areaUndo, data } = get()
+      if (!areaUndo) return
+      set({
+        data: {
+          ...data,
+          areas: [...data.areas, areaUndo.area],
+          tasks: [...data.tasks, ...areaUndo.tasks]
+        },
+        areaUndo: undefined,
+        areaUndoLeaving: false
       })
     },
+
+    dismissAreaUndo: () => set({ areaUndo: undefined, areaUndoLeaving: false }),
 
     reorderAreas: (orderedIds) => {
       const { data } = get()
@@ -244,7 +306,11 @@ export const useDataStore = create<DataState>((set, get) => {
     undoCompletion: () => {
       const undo = get().undo
       if (!undo) return
-      set({ undo: undefined, lingering: withoutKey(get().lingering, undo.taskId) })
+      set({
+        undo: undefined,
+        lingering: withoutKey(get().lingering, undo.taskId),
+        leaving: withoutKey(get().leaving, undo.taskId)
+      })
       if (undo.subtaskId) {
         changeTask(undo.taskId, (t) => toggleSubtaskCompleted(t, undo.subtaskId!, now()))
       } else {
@@ -256,7 +322,8 @@ export const useDataStore = create<DataState>((set, get) => {
       const undo = get().undo
       set({
         undo: undefined,
-        lingering: undo ? withoutKey(get().lingering, undo.taskId) : get().lingering
+        lingering: undo ? withoutKey(get().lingering, undo.taskId) : get().lingering,
+        leaving: undo ? withoutKey(get().leaving, undo.taskId) : get().leaving
       })
     },
 

@@ -44,7 +44,7 @@ export function DeleteAreaDialog({
         <AlertDialogTitle>¿Borrar el área «{area?.name}»?</AlertDialogTitle>
         <AlertDialogDescription>
           {tasksText}
-          {archivedText} Esta acción no se puede deshacer.
+          {archivedText} Podrás deshacerlo durante unos segundos.
         </AlertDialogDescription>
         <div className="flex justify-end gap-2">
           <AlertDialogCancel asChild>

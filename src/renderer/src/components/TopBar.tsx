@@ -1,4 +1,5 @@
 import { CalendarDays, LayoutGrid, List, Plus } from 'lucide-react'
+import { AppLogo } from '@renderer/components/AppLogo'
 import { SettingsMenu } from '@renderer/components/SettingsMenu'
 import { cn } from '@renderer/lib/utils'
 
@@ -63,10 +64,7 @@ export function TopBar({
         )}
       >
         <span className="flex size-11 shrink-0 items-center justify-center" aria-hidden="true">
-          <span
-            className="paper block size-5 rotate-[-4deg]"
-            style={{ backgroundColor: '#FFE680' }}
-          />
+          <AppLogo className="h-5 w-auto" />
         </span>
         <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-700 ease-in-out group-hover/brand:max-w-40 group-hover/brand:pr-5 group-hover/brand:opacity-100 motion-reduce:transition-none">
           Pendientes

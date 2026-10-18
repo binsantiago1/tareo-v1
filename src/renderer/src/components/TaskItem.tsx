@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { ListPlus } from 'lucide-react'
@@ -33,6 +33,8 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
   const addSubtask = useDataStore((s) => s.addSubtask)
   const reorderSubtasks = useDataStore((s) => s.reorderSubtasks)
   const sensors = useLongPressSensors()
+  const liRef = useRef<HTMLLIElement | null>(null)
+  const leaving = useDataStore((s) => s.leaving[task.id] === true)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [addingSubtask, setAddingSubtask] = useState(false)
@@ -50,9 +52,33 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
     reorderSubtasks(task.id, arrayMove(subtaskIds, from, to))
   }
 
+  // Animación de salida de una tarea completada: se desvanece y se encoge hasta desaparecer.
+  // Si se pulsa "Deshacer" a mitad, la animación se cancela y la tarea vuelve a verse.
+  useEffect(() => {
+    const el = liRef.current
+    if (!leaving || !el) return
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const height = el.offsetHeight
+    el.style.overflow = 'hidden'
+    const animation = el.animate(
+      [
+        { height: `${height}px`, opacity: 1, marginTop: '0px' },
+        { height: '0px', opacity: 0, marginTop: '-0.5rem' }
+      ],
+      { duration: reduceMotion ? 0 : 350, easing: 'ease-in', fill: 'forwards' }
+    )
+    return () => {
+      animation.cancel()
+      el.style.overflow = ''
+    }
+  }, [leaving])
+
   return (
     <li
-      ref={drag?.setNodeRef}
+      ref={(node) => {
+        liRef.current = node
+        drag?.setNodeRef(node)
+      }}
       style={drag?.style}
       {...drag?.listeners}
       className={cn('grid gap-1 bg-card', drag?.isDragging && 'relative z-10 rounded shadow-md')}
