@@ -60,4 +60,14 @@ export interface LoadResult {
 export interface DataApi {
   loadData: () => Promise<LoadResult>
   saveData: (data: AppData) => Promise<void>
+  /** Abre "Guardar como" y escribe una copia de seguridad con los datos dados. */
+  exportBackup: (data: AppData) => Promise<ExportResult>
+  /** Abre "Abrir archivo", valida la copia y la devuelve (no la aplica por sí sola). */
+  importBackup: () => Promise<ImportResult>
 }
+
+export type ExportResult =
+  { status: 'ok'; path: string } | { status: 'canceled' } | { status: 'error'; message: string }
+
+export type ImportResult =
+  { status: 'ok'; data: AppData } | { status: 'canceled' } | { status: 'error'; message: string }

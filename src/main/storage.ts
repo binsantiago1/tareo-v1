@@ -122,3 +122,25 @@ export function saveData(dir: string, data: AppData): Promise<void> {
   queue = task.catch(() => undefined)
   return task
 }
+
+/** Lee el texto de una copia de seguridad. Devuelve null si no es un archivo de datos válido. */
+export function parseBackup(text: string): AppData | null {
+  try {
+    const parsed: unknown = JSON.parse(text)
+    return isValidData(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Guarda una copia del archivo actual antes de que una importación lo sustituya,
+ * para no perder nunca los datos de antes. Devuelve el nombre de la copia, o null si no había archivo.
+ */
+export async function snapshotBeforeImport(dir: string): Promise<string | null> {
+  const file = join(dir, DATA_FILE)
+  if (!(await exists(file))) return null
+  const name = `datos.antes-de-importar-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
+  await fs.copyFile(file, join(dir, name))
+  return name
+}

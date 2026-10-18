@@ -45,6 +45,8 @@ interface DataState {
   undo?: { key: number; title: string; taskId: string; subtaskId?: string }
   init: () => Promise<void>
   dismissWarning: () => void
+  /** Sustituye todos los datos (al importar una copia de seguridad). */
+  replaceData: (data: AppData) => void
   addArea: (values: AreaValues) => void
   updateArea: (id: string, values: AreaValues) => void
   removeArea: (id: string) => void
@@ -91,6 +93,8 @@ export const useDataStore = create<DataState>((set, get) => {
     },
 
     dismissWarning: () => set({ warning: undefined }),
+
+    replaceData: (data) => set({ data, undo: undefined }),
 
     addArea: ({ name, note }) => {
       const { data } = get()

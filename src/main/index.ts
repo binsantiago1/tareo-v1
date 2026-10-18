@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { registerBackupHandlers } from './backup'
 import { loadData, saveData } from './storage'
 import type { AppData } from '../shared/types'
 
@@ -56,6 +57,7 @@ app.whenReady().then(() => {
   const dataDir = app.getPath('userData')
   ipcMain.handle('datos:cargar', () => loadData(dataDir))
   ipcMain.handle('datos:guardar', (_event, data: AppData) => saveData(dataDir, data))
+  registerBackupHandlers(dataDir)
 
   createWindow()
 

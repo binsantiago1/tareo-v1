@@ -1,5 +1,6 @@
-import { Archive, Plus } from 'lucide-react'
+import { Archive, DatabaseBackup, Plus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
+import { ThemeToggle } from '@renderer/components/ThemeToggle'
 
 export type View = 'lista' | 'cuadricula' | 'calendario'
 
@@ -15,6 +16,7 @@ interface Props {
   archivedCount: number
   onViewChange: (view: View) => void
   onToggleArchive: () => void
+  onOpenBackup: () => void
   onNewArea: () => void
 }
 
@@ -24,10 +26,11 @@ export function TopBar({
   archivedCount,
   onViewChange,
   onToggleArchive,
+  onOpenBackup,
   onNewArea
 }: Props): React.JSX.Element {
   return (
-    <header className="flex items-center justify-between gap-4 border-b px-6 py-3">
+    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-6 py-3">
       <h1 className="text-xl font-semibold">Pendientes</h1>
       {/* Selector de vista */}
       <div role="group" aria-label="Vista" className="flex gap-1 rounded-md border p-0.5">
@@ -46,7 +49,7 @@ export function TopBar({
           )
         })}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           variant={archiveOpen ? 'secondary' : 'outline'}
           aria-pressed={archiveOpen}
@@ -55,6 +58,11 @@ export function TopBar({
           <Archive className="size-4" />
           Archivo{archivedCount > 0 && ` (${archivedCount})`}
         </Button>
+        <Button variant="outline" onClick={onOpenBackup}>
+          <DatabaseBackup className="size-4" />
+          Copias
+        </Button>
+        <ThemeToggle />
         <Button onClick={onNewArea}>
           <Plus className="size-4" />
           Nueva área

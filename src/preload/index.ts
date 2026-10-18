@@ -4,7 +4,9 @@ import type { AppData, DataApi } from '../shared/types'
 
 const api: DataApi = {
   loadData: () => ipcRenderer.invoke('datos:cargar'),
-  saveData: (data: AppData) => ipcRenderer.invoke('datos:guardar', data)
+  saveData: (data: AppData) => ipcRenderer.invoke('datos:guardar', data),
+  exportBackup: (data: AppData) => ipcRenderer.invoke('datos:exportar', data),
+  importBackup: () => ipcRenderer.invoke('datos:importar')
 }
 
 if (process.contextIsolated) {

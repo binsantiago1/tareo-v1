@@ -72,3 +72,11 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
   }
 }
+
+/* Que los controles nativos (fecha, listas) sigan el tema. */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}

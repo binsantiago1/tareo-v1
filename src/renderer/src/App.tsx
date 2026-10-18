@@ -18,6 +18,7 @@ import { Button } from '@renderer/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog'
 import { AreaDialog } from '@renderer/components/AreaDialog'
 import { ArchiveView } from '@renderer/components/ArchiveView'
+import { BackupDialog } from '@renderer/components/BackupDialog'
 import { CalendarView } from '@renderer/components/CalendarView'
 import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
 import { GridPostIt } from '@renderer/components/GridPostIt'
@@ -52,6 +53,7 @@ function App(): React.JSX.Element {
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [columnsSetting, setColumnsSetting] = useState<ColumnsSetting>('auto')
   const [openAreaId, setOpenAreaId] = useState<string | null>(null)
+  const [backupOpen, setBackupOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Area | null>(null)
   const [deleting, setDeleting] = useState<Area | null>(null)
@@ -92,6 +94,7 @@ function App(): React.JSX.Element {
           setArchiveOpen(false)
         }}
         onToggleArchive={() => setArchiveOpen((open) => !open)}
+        onOpenBackup={() => setBackupOpen(true)}
         onNewArea={() => {
           setArchiveOpen(false)
           setCreating(true)
@@ -199,6 +202,7 @@ function App(): React.JSX.Element {
         </DialogContent>
       </Dialog>
 
+      <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
       <AreaDialog open={creating} onOpenChange={setCreating} onSave={addArea} />
       <AreaDialog
         key={editing?.id}
