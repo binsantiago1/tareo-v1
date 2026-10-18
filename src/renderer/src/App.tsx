@@ -15,14 +15,20 @@ import {
   sortableKeyboardCoordinates
 } from '@dnd-kit/sortable'
 import { Button } from '@renderer/components/ui/button'
+import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog'
 import { AreaDialog } from '@renderer/components/AreaDialog'
-import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
-import { PostIt } from '@renderer/components/PostIt'
 import { ArchiveView } from '@renderer/components/ArchiveView'
-import { TopBar, type Screen } from '@renderer/components/TopBar'
+import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
+import { GridPostIt } from '@renderer/components/GridPostIt'
+import { PostIt } from '@renderer/components/PostIt'
+import { SortablePostIt } from '@renderer/components/SortablePostIt'
+import { TopBar, type View } from '@renderer/components/TopBar'
 import { UndoToast } from '@renderer/components/UndoToast'
 import { useDataStore } from '@renderer/store/useDataStore'
+import { autoGridColumns, type GridColumns } from '../../shared/grid'
 import type { Area } from '../../shared/types'
+
+type ColumnsSetting = 'auto' | GridColumns
 
 function App(): React.JSX.Element {
   const {
@@ -41,7 +47,10 @@ function App(): React.JSX.Element {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
-  const [screen, setScreen] = useState<Screen>('lista')
+  const [view, setView] = useState<View>('lista')
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [columnsSetting, setColumnsSetting] = useState<ColumnsSetting>('auto')
+  const [openAreaId, setOpenAreaId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Area | null>(null)
   const [deleting, setDeleting] = useState<Area | null>(null)
@@ -51,8 +60,14 @@ function App(): React.JSX.Element {
   }, [init])
 
   const areas = useMemo(() => [...data.areas].sort((a, b) => a.order - b.order), [data.areas])
+  const pendingOf = (areaId: string): typeof data.tasks =>
+    data.tasks.filter((t) => t.areaId === areaId && !t.completed)
   const deletingTasks = deleting ? data.tasks.filter((t) => t.areaId === deleting.id) : []
   const archivedCount = data.tasks.filter((t) => t.completed).length
+  const columns: GridColumns =
+    columnsSetting === 'auto' ? autoGridColumns(areas.length) : columnsSetting
+  // Si el área abierta se borra, el post-it ampliado se cierra solo.
+  const openArea = areas.find((a) => a.id === openAreaId)
 
   const handleAreaDragEnd = ({ active, over }: DragEndEvent): void => {
     if (!over || active.id === over.id) return
@@ -68,11 +83,16 @@ function App(): React.JSX.Element {
   return (
     <div className="flex h-screen flex-col">
       <TopBar
-        screen={screen}
+        view={view}
+        archiveOpen={archiveOpen}
         archivedCount={archivedCount}
-        onScreenChange={setScreen}
+        onViewChange={(v) => {
+          setView(v)
+          setArchiveOpen(false)
+        }}
+        onToggleArchive={() => setArchiveOpen((open) => !open)}
         onNewArea={() => {
-          setScreen('lista')
+          setArchiveOpen(false)
           setCreating(true)
         }}
       />
@@ -92,7 +112,7 @@ function App(): React.JSX.Element {
       )}
 
       <main className="flex-1 overflow-y-auto p-6">
-        {screen === 'archivo' ? (
+        {archiveOpen ? (
           <ArchiveView />
         ) : areas.length === 0 ? (
           <div className="mx-auto mt-16 flex max-w-sm flex-col items-center gap-3 text-center">
@@ -103,7 +123,7 @@ function App(): React.JSX.Element {
             </p>
             <Button onClick={() => setCreating(true)}>Nueva área</Button>
           </div>
-        ) : (
+        ) : view === 'lista' ? (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -112,10 +132,10 @@ function App(): React.JSX.Element {
             <SortableContext items={areas.map((a) => a.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] items-start gap-4">
                 {areas.map((area) => (
-                  <PostIt
+                  <SortablePostIt
                     key={area.id}
                     area={area}
-                    tasks={data.tasks.filter((t) => t.areaId === area.id && !t.completed)}
+                    tasks={pendingOf(area.id)}
                     onEdit={() => setEditing(area)}
                     onDelete={() => setDeleting(area)}
                   />
@@ -123,8 +143,58 @@ function App(): React.JSX.Element {
               </div>
             </SortableContext>
           </DndContext>
+        ) : (
+          <div className="grid gap-4">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              Columnas:
+              <select
+                value={columnsSetting}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setColumnsSetting(v === 'auto' ? 'auto' : (Number(v) as GridColumns))
+                }}
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <option value="auto">Automático ({autoGridColumns(areas.length)})</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </label>
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+            >
+              {areas.map((area) => (
+                <GridPostIt
+                  key={area.id}
+                  area={area}
+                  tasks={pendingOf(area.id)}
+                  onOpen={() => setOpenAreaId(area.id)}
+                />
+              ))}
+            </div>
+          </div>
         )}
       </main>
+
+      {/* Post-it completo, abierto desde la Cuadrícula. */}
+      <Dialog open={openArea !== undefined} onOpenChange={(open) => !open && setOpenAreaId(null)}>
+        <DialogContent
+          aria-describedby={undefined}
+          className="max-h-[90vh] max-w-xl overflow-y-auto border-0 bg-transparent p-0 shadow-none"
+        >
+          <DialogTitle className="sr-only">Área {openArea?.name}</DialogTitle>
+          {openArea && (
+            <PostIt
+              area={openArea}
+              tasks={pendingOf(openArea.id)}
+              onEdit={() => setEditing(openArea)}
+              onDelete={() => setDeleting(openArea)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AreaDialog open={creating} onOpenChange={setCreating} onSave={addArea} />
       <AreaDialog

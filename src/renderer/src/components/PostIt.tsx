@@ -11,11 +11,9 @@ import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { QuickAdd } from '@renderer/components/QuickAdd'
 import { SortableTask } from '@renderer/components/SortableTask'
@@ -24,9 +22,18 @@ import { useDataStore } from '@renderer/store/useDataStore'
 import { sortTasks } from '../../../shared/sorting'
 import type { Area, SortCriterion, Task } from '../../../shared/types'
 
+/** Piezas para poder mover el post-it arrastrándolo (solo en la vista Lista). */
+export interface PostItDrag {
+  setNodeRef: (node: HTMLElement | null) => void
+  style: React.CSSProperties
+  isDragging: boolean
+  handle: React.ReactNode
+}
+
 interface Props {
   area: Area
   tasks: Task[]
+  drag?: PostItDrag
   onEdit: () => void
   onDelete: () => void
 }
@@ -38,19 +45,8 @@ const CRITERIA: { value: SortCriterion; label: string }[] = [
   { value: 'personalizado', label: 'Personalizado' }
 ]
 
-export function PostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Element {
+export function PostIt({ area, tasks, drag, onEdit, onDelete }: Props): React.JSX.Element {
   const { addTask, setSortCriterion, reorderTasks } = useDataStore()
-
-  // Arrastrar el post-it entero (dentro del contexto de áreas que crea App).
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: area.id })
 
   // Arrastrar tareas (contexto propio de este post-it). Funciona con ratón y con teclado.
   const sensors = useSensors(
@@ -72,27 +68,17 @@ export function PostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Elem
 
   return (
     <article
-      ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      ref={drag?.setNodeRef}
+      style={drag?.style}
       aria-label={`Área ${area.name}`}
       className={cn(
         'flex min-h-64 flex-col gap-3 rounded-lg border bg-card p-4 text-card-foreground shadow-sm',
-        isDragging && 'relative z-20 opacity-90 shadow-xl'
+        drag?.isDragging && 'relative z-20 opacity-90 shadow-xl'
       )}
     >
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-1">
-          <button
-            type="button"
-            ref={setActivatorNodeRef}
-            className="mt-1 shrink-0 cursor-grab touch-none rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
-            aria-label={`Mover el post-it ${area.name}`}
-            title="Arrastrar para mover el post-it"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="size-5" />
-          </button>
+          {drag?.handle}
           <h2 className="text-2xl leading-tight font-semibold break-words">{area.name}</h2>
         </div>
         <div className="flex shrink-0">
