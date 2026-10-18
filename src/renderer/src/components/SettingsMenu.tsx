@@ -10,7 +10,8 @@ interface Props {
   archivedCount: number
   onToggleArchive: () => void
   onOpenBackup: () => void
-  pillClass: string
+  /** Clases del botón del engranaje (las pone la barra superior). */
+  buttonClass: string
 }
 
 const ITEM_CLASS =
@@ -22,7 +23,7 @@ export function SettingsMenu({
   archivedCount,
   onToggleArchive,
   onOpenBackup,
-  pillClass
+  buttonClass
 }: Props): React.JSX.Element {
   const { dark, setDark } = useTheme()
   const [open, setOpen] = useState(false)
@@ -34,9 +35,9 @@ export function SettingsMenu({
           type="button"
           aria-label="Configuración"
           title="Configuración"
-          className={cn(pillClass, 'size-11 justify-center', open && 'bg-accent')}
+          className={cn(buttonClass, open && 'bg-accent text-foreground')}
         >
-          <Settings className="size-5" />
+          <Settings className="size-[15px]" />
         </button>
       </PopoverTrigger>
       <PopoverContent aria-label="Configuración">

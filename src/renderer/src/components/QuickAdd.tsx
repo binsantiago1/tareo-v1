@@ -36,7 +36,7 @@ export function QuickAdd({
         autoFocus={autoFocus}
         value={value}
         maxLength={200}
-        className="h-8"
+        className="h-8 bg-transparent"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Escape' && onCancel) {

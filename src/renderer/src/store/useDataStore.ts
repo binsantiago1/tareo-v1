@@ -6,6 +6,7 @@ import {
   type DateOnly,
   type Priority,
   type SortCriterion,
+  type Subtask,
   type Task
 } from '../../../shared/types'
 import {
@@ -67,6 +68,8 @@ interface DataState {
   addSubtask: (taskId: string, title: string) => void
   updateSubtask: (taskId: string, subtaskId: string, values: SubtaskValues) => void
   removeSubtask: (taskId: string, subtaskId: string) => void
+  /** Pone las subtareas de una tarea en el orden dado (lista de ids). */
+  reorderSubtasks: (taskId: string, orderedIds: string[]) => void
   toggleSubtask: (taskId: string, subtaskId: string) => void
 }
 
@@ -240,6 +243,14 @@ export const useDataStore = create<DataState>((set, get) => {
 
     removeSubtask: (taskId, subtaskId) =>
       changeTask(taskId, (t) => removeSubtaskFrom(t, subtaskId, now())),
+
+    reorderSubtasks: (taskId, orderedIds) =>
+      changeTask(taskId, (t) => ({
+        ...t,
+        subtasks: orderedIds
+          .map((id) => t.subtasks.find((s) => s.id === id))
+          .filter((s): s is Subtask => s !== undefined)
+      })),
 
     toggleSubtask: (taskId, subtaskId) => {
       const before = get().data.tasks.find((t) => t.id === taskId)

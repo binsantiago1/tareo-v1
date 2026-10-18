@@ -1,53 +1,61 @@
 import { useState } from 'react'
-import { ListPlus, Pencil, Trash2 } from 'lucide-react'
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { ListPlus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { ItemDialog } from '@renderer/components/ItemDialog'
 import { PriorityMark } from '@renderer/components/PriorityMark'
 import { QuickAdd } from '@renderer/components/QuickAdd'
+import { RowMenu } from '@renderer/components/RowMenu'
+import { SortableSubtask } from '@renderer/components/SubtaskRow'
+import type { RowDrag } from '@renderer/components/SubtaskRow'
 import { formatDueDate, todayString } from '@renderer/lib/dates'
+import { useLongPressSensors } from '@renderer/lib/dnd'
+import { HOVER_ACTIONS } from '@renderer/lib/hoverActions'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { isOverdue } from '../../../shared/taskRules'
-import type { Subtask, Task } from '../../../shared/types'
+import type { Task } from '../../../shared/types'
 
-/** Piezas para poder arrastrar la tarea (solo las tareas pendientes se arrastran). */
-export interface TaskDrag {
-  setNodeRef: (node: HTMLElement | null) => void
-  style: React.CSSProperties
-  isDragging: boolean
-  /** Botón-asa para arrastrar. */
-  handle: React.ReactNode
+interface Props {
+  task: Task
+  /** Piezas para arrastrar la tarea manteniendo pulsado el clic. */
+  drag?: RowDrag
 }
 
-export function TaskItem({ task, drag }: { task: Task; drag?: TaskDrag }): React.JSX.Element {
-  const {
-    toggleTask,
-    updateTask,
-    removeTask,
-    addSubtask,
-    toggleSubtask,
-    updateSubtask,
-    removeSubtask
-  } = useDataStore()
+export function TaskItem({ task, drag }: Props): React.JSX.Element {
+  const toggleTask = useDataStore((s) => s.toggleTask)
+  const updateTask = useDataStore((s) => s.updateTask)
+  const removeTask = useDataStore((s) => s.removeTask)
+  const addSubtask = useDataStore((s) => s.addSubtask)
+  const reorderSubtasks = useDataStore((s) => s.reorderSubtasks)
+  const sensors = useLongPressSensors()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [addingSubtask, setAddingSubtask] = useState(false)
-  const [editingSubtask, setEditingSubtask] = useState<Subtask | null>(null)
-  const [deletingSubtask, setDeletingSubtask] = useState<Subtask | null>(null)
 
   const hasSubtasks = task.subtasks.length > 0
   const doneCount = task.subtasks.filter((s) => s.completed).length
   const overdue = !task.completed && isOverdue(task.dueDate, todayString())
+  const subtaskIds = task.subtasks.map((s) => s.id)
+
+  const handleSubtaskDragEnd = ({ active, over }: DragEndEvent): void => {
+    if (!over || active.id === over.id) return
+    const from = subtaskIds.indexOf(String(active.id))
+    const to = subtaskIds.indexOf(String(over.id))
+    if (from === -1 || to === -1) return
+    reorderSubtasks(task.id, arrayMove(subtaskIds, from, to))
+  }
 
   return (
     <li
       ref={drag?.setNodeRef}
       style={drag?.style}
+      {...drag?.listeners}
       className={cn('grid gap-1 bg-card', drag?.isDragging && 'relative z-10 rounded shadow-md')}
     >
-      <div className="flex items-start gap-2">
-        {drag ? drag.handle : <span className="w-5 shrink-0" aria-hidden="true" />}
+      <div className="group/zone flex items-start gap-2">
         <input
           type="checkbox"
           className="mt-1 size-4 shrink-0 accent-primary"
@@ -88,7 +96,8 @@ export function TaskItem({ task, drag }: { task: Task; drag?: TaskDrag }): React
             </p>
           )}
         </div>
-        <div className="flex shrink-0">
+        {/* Los iconos solo aparecen al pasar el cursor por la tarea (o al navegar con teclado). */}
+        <div className={HOVER_ACTIONS}>
           <Button
             variant="ghost"
             size="icon"
@@ -99,91 +108,39 @@ export function TaskItem({ task, drag }: { task: Task; drag?: TaskDrag }): React
           >
             <ListPlus className="size-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            aria-label={`Editar «${task.title}»`}
-            title="Editar tarea"
-            onClick={() => setEditing(true)}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            aria-label={`Borrar «${task.title}»`}
-            title="Borrar tarea"
-            onClick={() => setDeleting(true)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <RowMenu
+            label={`la tarea «${task.title}»`}
+            onEdit={() => setEditing(true)}
+            onDelete={() => setDeleting(true)}
+          />
         </div>
       </div>
 
       {(hasSubtasks || addingSubtask) && (
-        <ul className="ml-6 grid gap-1 border-l pl-3">
-          {task.subtasks.map((sub) => (
-            <li key={sub.id} className="flex items-start gap-2">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 shrink-0 accent-primary"
-                checked={sub.completed}
-                aria-label={`Completar subtarea «${sub.title}»`}
-                onChange={() => toggleSubtask(task.id, sub.id)}
-              />
-              <div className="min-w-0 flex-1 text-sm">
-                <span
-                  className={cn(
-                    'break-words',
-                    sub.completed && 'text-muted-foreground line-through'
-                  )}
-                >
-                  {sub.title}
-                </span>
-                {sub.note && (
-                  <p className="text-xs whitespace-pre-wrap break-words text-muted-foreground">
-                    {sub.note}
-                  </p>
-                )}
-              </div>
-              <div className="flex shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  aria-label={`Editar subtarea «${sub.title}»`}
-                  title="Editar subtarea"
-                  onClick={() => setEditingSubtask(sub)}
-                >
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  aria-label={`Borrar subtarea «${sub.title}»`}
-                  title="Borrar subtarea"
-                  onClick={() => setDeletingSubtask(sub)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
-            </li>
-          ))}
-          {addingSubtask && (
-            <li>
-              <QuickAdd
-                autoFocus
-                label={`Nueva subtarea de «${task.title}»`}
-                placeholder="Nueva subtarea y Enter (Esc para cerrar)"
-                onAdd={(title) => addSubtask(task.id, title)}
-                onCancel={() => setAddingSubtask(false)}
-              />
-            </li>
-          )}
-        </ul>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleSubtaskDragEnd}
+        >
+          <SortableContext items={subtaskIds} strategy={verticalListSortingStrategy}>
+            <ul className="ml-6 grid gap-1 border-l pl-3">
+              {task.subtasks.map((sub) => (
+                <SortableSubtask key={sub.id} task={task} subtask={sub} />
+              ))}
+              {addingSubtask && (
+                <li>
+                  <QuickAdd
+                    autoFocus
+                    label={`Nueva subtarea de «${task.title}»`}
+                    placeholder="Nueva subtarea"
+                    onAdd={(title) => addSubtask(task.id, title)}
+                    onCancel={() => setAddingSubtask(false)}
+                  />
+                </li>
+              )}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
 
       <ItemDialog
@@ -211,31 +168,6 @@ export function TaskItem({ task, drag }: { task: Task; drag?: TaskDrag }): React
         onConfirm={() => {
           removeTask(task.id)
           setDeleting(false)
-        }}
-      />
-      <ItemDialog
-        key={editingSubtask?.id}
-        kind="subtarea"
-        initial={{
-          title: editingSubtask?.title ?? '',
-          note: editingSubtask?.note ?? '',
-          priority: 0
-        }}
-        open={editingSubtask !== null}
-        onOpenChange={(open) => !open && setEditingSubtask(null)}
-        onSave={({ title, note }) =>
-          editingSubtask && updateSubtask(task.id, editingSubtask.id, { title, note })
-        }
-      />
-      <ConfirmDialog
-        open={deletingSubtask !== null}
-        title={`¿Borrar la subtarea «${deletingSubtask?.title}»?`}
-        description="Esta acción no se puede deshacer."
-        confirmLabel="Borrar subtarea"
-        onCancel={() => setDeletingSubtask(null)}
-        onConfirm={() => {
-          if (deletingSubtask) removeSubtask(task.id, deletingSubtask.id)
-          setDeletingSubtask(null)
         }}
       />
     </li>

@@ -10,9 +10,12 @@ const VIEWS = [
   { value: 'calendario', label: 'Calendario', Icon: CalendarDays }
 ] as const
 
-/** Aspecto común de las "píldoras" flotantes de la derecha. */
-const PILL =
-  'flex h-11 items-center rounded-full border bg-card text-card-foreground shadow-md transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none'
+/** Superficie común de los elementos flotantes: fondo blanco al 70% y sombra suave. */
+const SURFACE = 'border bg-card/70 shadow-sm backdrop-blur-sm'
+
+/** Botón de icono pequeño de la barra (75% del tamaño anterior). */
+const BAR_BUTTON =
+  'flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none'
 
 interface Props {
   view: View
@@ -24,7 +27,7 @@ interface Props {
   onNewArea: () => void
 }
 
-/** Cabecera flotante: isla con el nombre al centro y tres grupos de botones a la derecha. */
+/** Cabecera flotante: isla con el icono arriba a la izquierda y una barra de botones a la derecha. */
 export function TopBar({
   view,
   archiveOpen,
@@ -35,26 +38,29 @@ export function TopBar({
   onNewArea
 }: Props): React.JSX.Element {
   return (
-    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 pt-4 pb-2">
-      <div aria-hidden="true" />
-
-      {/* Isla central, como la de los iPhone: siempre oscura. */}
-      <h1 className="flex h-11 items-center gap-2.5 rounded-full bg-black px-5 text-base font-bold tracking-tight text-white shadow-lg ring-1 ring-white/15">
-        <span
-          aria-hidden="true"
-          className="paper block size-5 rotate-[-4deg]"
-          style={{ backgroundColor: 'oklch(0.93 0.12 98)' }}
-        />
-        Pendientes
+    <header className="flex items-start justify-between gap-3 px-6 pt-4 pb-2">
+      {/* Isla: solo el icono; al pasar el cursor se despliega el nombre. */}
+      <h1
+        className={cn(
+          SURFACE,
+          'group/brand flex h-8 items-center overflow-hidden rounded-full text-sm font-bold tracking-tight'
+        )}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
+          <span
+            className="paper block size-4 rotate-[-4deg]"
+            style={{ backgroundColor: 'oklch(0.93 0.12 98)' }}
+          />
+        </span>
+        <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/brand:max-w-32 group-hover/brand:pr-3 group-hover/brand:opacity-100 motion-reduce:transition-none">
+          Pendientes
+        </span>
       </h1>
 
-      <div className="flex items-center justify-end gap-3">
+      {/* Una sola barra con tres secciones separadas por una línea vertical. */}
+      <div className={cn(SURFACE, 'flex h-8 items-center gap-1 rounded-xl px-1')}>
         {/* 1. Vistas */}
-        <div
-          role="group"
-          aria-label="Vista"
-          className="flex h-11 items-center gap-1 rounded-full border bg-card p-1 shadow-md"
-        >
+        <div role="group" aria-label="Vista" className="flex items-center gap-0.5">
           {VIEWS.map(({ value, label, Icon }) => {
             const active = !archiveOpen && view === value
             return (
@@ -66,17 +72,18 @@ export function TopBar({
                 title={label}
                 onClick={() => onViewChange(value)}
                 className={cn(
-                  'flex size-9 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none',
-                  active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  BAR_BUTTON,
+                  active &&
+                    'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground'
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-[15px]" />
               </button>
             )
           })}
         </div>
+
+        <span className="h-4 w-px bg-border" aria-hidden="true" />
 
         {/* 2. Nueva área */}
         <button
@@ -84,10 +91,12 @@ export function TopBar({
           aria-label="Nueva área"
           title="Nueva área"
           onClick={onNewArea}
-          className={cn(PILL, 'size-11 justify-center')}
+          className={BAR_BUTTON}
         >
-          <Plus className="size-5" />
+          <Plus className="size-[15px]" />
         </button>
+
+        <span className="h-4 w-px bg-border" aria-hidden="true" />
 
         {/* 3. Configuración */}
         <SettingsMenu
@@ -95,7 +104,7 @@ export function TopBar({
           archivedCount={archivedCount}
           onToggleArchive={onToggleArchive}
           onOpenBackup={onOpenBackup}
-          pillClass={PILL}
+          buttonClass={BAR_BUTTON}
         />
       </div>
     </header>

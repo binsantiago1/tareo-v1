@@ -1,19 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  rectSortingStrategy,
-  sortableKeyboardCoordinates
-} from '@dnd-kit/sortable'
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
 import { Button } from '@renderer/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog'
 import { AreaDialog } from '@renderer/components/AreaDialog'
@@ -26,6 +13,7 @@ import { PostIt } from '@renderer/components/PostIt'
 import { SortablePostIt } from '@renderer/components/SortablePostIt'
 import { TopBar, type View } from '@renderer/components/TopBar'
 import { UndoToast } from '@renderer/components/UndoToast'
+import { useLongPressSensors } from '@renderer/lib/dnd'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { autoGridColumns, type GridColumns } from '../../shared/grid'
 import { DEFAULT_NOTE_COLOR, nextFreeColor } from '../../shared/palette'
@@ -46,10 +34,7 @@ function App(): React.JSX.Element {
     removeArea,
     reorderAreas
   } = useDataStore()
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
+  const sensors = useLongPressSensors()
   const [view, setView] = useState<View>('lista')
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [columnsSetting, setColumnsSetting] = useState<ColumnsSetting>('auto')
