@@ -1,12 +1,12 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { AppData, DataApi } from '../shared/types'
 
-// Custom APIs for renderer
-const api = {}
+const api: DataApi = {
+  loadData: () => ipcRenderer.invoke('datos:cargar'),
+  saveData: (data: AppData) => ipcRenderer.invoke('datos:guardar', data)
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
