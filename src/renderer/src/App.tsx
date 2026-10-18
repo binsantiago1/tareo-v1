@@ -18,7 +18,9 @@ import { Button } from '@renderer/components/ui/button'
 import { AreaDialog } from '@renderer/components/AreaDialog'
 import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
 import { PostIt } from '@renderer/components/PostIt'
-import { TopBar } from '@renderer/components/TopBar'
+import { ArchiveView } from '@renderer/components/ArchiveView'
+import { TopBar, type Screen } from '@renderer/components/TopBar'
+import { UndoToast } from '@renderer/components/UndoToast'
 import { useDataStore } from '@renderer/store/useDataStore'
 import type { Area } from '../../shared/types'
 
@@ -39,6 +41,7 @@ function App(): React.JSX.Element {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
+  const [screen, setScreen] = useState<Screen>('lista')
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Area | null>(null)
   const [deleting, setDeleting] = useState<Area | null>(null)
@@ -48,7 +51,8 @@ function App(): React.JSX.Element {
   }, [init])
 
   const areas = useMemo(() => [...data.areas].sort((a, b) => a.order - b.order), [data.areas])
-  const deletingTaskCount = deleting ? data.tasks.filter((t) => t.areaId === deleting.id).length : 0
+  const deletingTasks = deleting ? data.tasks.filter((t) => t.areaId === deleting.id) : []
+  const archivedCount = data.tasks.filter((t) => t.completed).length
 
   const handleAreaDragEnd = ({ active, over }: DragEndEvent): void => {
     if (!over || active.id === over.id) return
@@ -63,7 +67,15 @@ function App(): React.JSX.Element {
 
   return (
     <div className="flex h-screen flex-col">
-      <TopBar onNewArea={() => setCreating(true)} />
+      <TopBar
+        screen={screen}
+        archivedCount={archivedCount}
+        onScreenChange={setScreen}
+        onNewArea={() => {
+          setScreen('lista')
+          setCreating(true)
+        }}
+      />
 
       {warning && (
         <div role="alert" className="m-4 rounded-md border border-destructive p-3 text-sm">
@@ -80,7 +92,9 @@ function App(): React.JSX.Element {
       )}
 
       <main className="flex-1 overflow-y-auto p-6">
-        {areas.length === 0 ? (
+        {screen === 'archivo' ? (
+          <ArchiveView />
+        ) : areas.length === 0 ? (
           <div className="mx-auto mt-16 flex max-w-sm flex-col items-center gap-3 text-center">
             <p className="text-lg font-medium">Todavía no tienes áreas</p>
             <p className="text-sm text-muted-foreground">
@@ -101,7 +115,7 @@ function App(): React.JSX.Element {
                   <PostIt
                     key={area.id}
                     area={area}
-                    tasks={data.tasks.filter((t) => t.areaId === area.id)}
+                    tasks={data.tasks.filter((t) => t.areaId === area.id && !t.completed)}
                     onEdit={() => setEditing(area)}
                     onDelete={() => setDeleting(area)}
                   />
@@ -122,13 +136,15 @@ function App(): React.JSX.Element {
       />
       <DeleteAreaDialog
         area={deleting}
-        taskCount={deletingTaskCount}
+        taskCount={deletingTasks.length}
+        archivedCount={deletingTasks.filter((t) => t.completed).length}
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
           if (deleting) removeArea(deleting.id)
           setDeleting(null)
         }}
       />
+      <UndoToast />
     </div>
   )
 }

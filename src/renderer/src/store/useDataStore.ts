@@ -11,6 +11,7 @@ import {
 import {
   addSubtaskTo,
   removeSubtaskFrom,
+  restoreTask,
   toggleSubtaskCompleted,
   toggleTaskCompleted
 } from '../../../shared/taskRules'
@@ -40,6 +41,8 @@ interface DataState {
   warning?: string
   /** Último error al guardar, si lo hubo. */
   saveError?: string
+  /** Última tarea completada, para ofrecer "Deshacer" unos segundos. */
+  undo?: { key: number; title: string; taskId: string; subtaskId?: string }
   init: () => Promise<void>
   dismissWarning: () => void
   addArea: (values: AreaValues) => void
@@ -54,6 +57,10 @@ interface DataState {
   updateTask: (id: string, values: TaskValues) => void
   removeTask: (id: string) => void
   toggleTask: (id: string) => void
+  /** Saca una tarea del Archivo y la deja pendiente. */
+  restoreTask: (id: string) => void
+  undoCompletion: () => void
+  dismissUndo: () => void
   addSubtask: (taskId: string, title: string) => void
   updateSubtask: (taskId: string, subtaskId: string, values: SubtaskValues) => void
   removeSubtask: (taskId: string, subtaskId: string) => void
@@ -62,6 +69,11 @@ interface DataState {
 
 export const useDataStore = create<DataState>((set, get) => {
   const now = (): string => new Date().toISOString()
+
+  /** Muestra el aviso "Deshacer" tras completar una tarea. */
+  const offerUndo = (task: Task, subtaskId?: string): void => {
+    set({ undo: { key: Date.now(), title: task.title, taskId: task.id, subtaskId } })
+  }
 
   /** Cambia una tarea concreta, dejando el resto igual. */
   const changeTask = (id: string, change: (task: Task) => Task): void => {
@@ -183,7 +195,27 @@ export const useDataStore = create<DataState>((set, get) => {
       set({ data: { ...data, tasks: data.tasks.filter((t) => t.id !== id) } })
     },
 
-    toggleTask: (id) => changeTask(id, (t) => toggleTaskCompleted(t, now())),
+    toggleTask: (id) => {
+      const before = get().data.tasks.find((t) => t.id === id)
+      changeTask(id, (t) => toggleTaskCompleted(t, now()))
+      const after = get().data.tasks.find((t) => t.id === id)
+      if (before && after?.completed && !before.completed) offerUndo(after)
+    },
+
+    restoreTask: (id) => changeTask(id, (t) => restoreTask(t)),
+
+    undoCompletion: () => {
+      const undo = get().undo
+      if (!undo) return
+      set({ undo: undefined })
+      if (undo.subtaskId) {
+        changeTask(undo.taskId, (t) => toggleSubtaskCompleted(t, undo.subtaskId!, now()))
+      } else {
+        changeTask(undo.taskId, (t) => toggleTaskCompleted(t, now()))
+      }
+    },
+
+    dismissUndo: () => set({ undo: undefined }),
 
     addSubtask: (taskId, title) =>
       changeTask(taskId, (t) =>
@@ -201,8 +233,13 @@ export const useDataStore = create<DataState>((set, get) => {
     removeSubtask: (taskId, subtaskId) =>
       changeTask(taskId, (t) => removeSubtaskFrom(t, subtaskId, now())),
 
-    toggleSubtask: (taskId, subtaskId) =>
+    toggleSubtask: (taskId, subtaskId) => {
+      const before = get().data.tasks.find((t) => t.id === taskId)
       changeTask(taskId, (t) => toggleSubtaskCompleted(t, subtaskId, now()))
+      const after = get().data.tasks.find((t) => t.id === taskId)
+      // Si esta subtarea fue la que completó la tarea, se puede deshacer.
+      if (before && after?.completed && !before.completed) offerUndo(after, subtaskId)
+    }
   }
 })
 

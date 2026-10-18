@@ -19,7 +19,6 @@ import { GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { QuickAdd } from '@renderer/components/QuickAdd'
 import { SortableTask } from '@renderer/components/SortableTask'
-import { TaskItem } from '@renderer/components/TaskItem'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { sortTasks } from '../../../shared/sorting'
@@ -59,15 +58,8 @@ export function PostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Elem
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  // Las completadas van al final hasta que exista el Archivo (Fase 6).
-  const pending = sortTasks(
-    tasks.filter((t) => !t.completed),
-    area.sortCriterion
-  )
-  const completed = sortTasks(
-    tasks.filter((t) => t.completed),
-    area.sortCriterion
-  )
+  // `tasks` solo trae las pendientes: las completadas están en el Archivo.
+  const pending = sortTasks(tasks, area.sortCriterion)
   const pendingIds = pending.map((t) => t.id)
 
   const handleTaskDragEnd = ({ active, over }: DragEndEvent): void => {
@@ -133,7 +125,7 @@ export function PostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Elem
 
       {tasks.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Sin tareas. Escribe una abajo y pulsa Enter.
+          Sin tareas pendientes. Escribe una abajo y pulsa Enter.
         </p>
       ) : (
         <DndContext
@@ -145,9 +137,6 @@ export function PostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Elem
             <ul className="grid gap-2 text-sm">
               {pending.map((task) => (
                 <SortableTask key={task.id} task={task} />
-              ))}
-              {completed.map((task) => (
-                <TaskItem key={task.id} task={task} />
               ))}
             </ul>
           </SortableContext>

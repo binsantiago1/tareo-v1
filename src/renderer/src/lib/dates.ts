@@ -6,6 +6,11 @@ export function todayString(): string {
   return format(new Date(), 'yyyy-MM-dd')
 }
 
+/** Momento ISO → "20 oct 2026" (hora local). */
+export function formatCompletedDate(iso: string): string {
+  return format(parseISO(iso), 'd MMM yyyy', { locale: es })
+}
+
 /** "2026-10-20" → "20 oct". */
 export function formatDueDate(dueDate: string): string {
   return format(parseISO(dueDate), 'd MMM', { locale: es })

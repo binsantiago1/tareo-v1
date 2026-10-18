@@ -39,6 +39,20 @@ export function removeSubtaskFrom(task: Task, subtaskId: string, now: string): T
   return withSubtaskCompletion({ ...task, subtasks }, now)
 }
 
+/**
+ * Saca una tarea del Archivo. Una tarea con subtareas solo está completa si todas lo están,
+ * así que se deja pendiente la última subtarea (el resto del avance se conserva).
+ */
+export function restoreTask(task: Task): Task {
+  const subtasks =
+    task.subtasks.length > 0
+      ? task.subtasks.map((s, i) =>
+          i === task.subtasks.length - 1 ? { ...s, completed: false } : s
+        )
+      : task.subtasks
+  return { ...task, subtasks, completed: false, completedAt: undefined }
+}
+
 /** Una fecha límite ("YYYY-MM-DD") está vencida si es anterior a hoy. */
 export function isOverdue(dueDate: string | undefined, today: string): boolean {
   return dueDate !== undefined && dueDate < today
