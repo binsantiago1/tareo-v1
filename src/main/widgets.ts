@@ -10,6 +10,8 @@ const DEFAULT_WIDTH = 320 + MARGIN * 2
 const DEFAULT_HEIGHT = 260
 const MIN_WIDTH = 200 + MARGIN * 2
 const MIN_HEIGHT = 120 + MARGIN * 2
+/** Tiempo máximo de un movimiento (seguro contra un clic que no se suelta del todo). */
+const MAX_MOVE_MS = 30_000
 
 interface PinnedWidget {
   areaId: string
@@ -55,6 +57,14 @@ export function createWidgetManager(options: Options): {
   let pinned: PinnedWidget[] = []
   const windows = new Map<string, BrowserWindow>()
   const layouts = new Map<string, WidgetLayout>()
+  const moving = new Map<BrowserWindow, NodeJS.Timeout>()
+
+  function stopMoving(window: BrowserWindow | null): void {
+    if (!window) return
+    const timer = moving.get(window)
+    if (timer) clearInterval(timer)
+    moving.delete(window)
+  }
   let tray: Tray | null = null
   let knownAreaIds: Set<string> | null = null
 
@@ -227,6 +237,7 @@ export function createWidgetManager(options: Options): {
     windows.set(widget.areaId, window)
     window.on('ready-to-show', () => window.showInactive())
     window.on('closed', () => {
+      stopMoving(window)
       windows.delete(widget.areaId)
       layouts.delete(widget.areaId)
     })
@@ -306,18 +317,32 @@ export function createWidgetManager(options: Options): {
         rememberLater(areaId)
       })
 
-      ipcMain.handle('widgets:posicion', (event) => {
-        const window = BrowserWindow.fromWebContents(event.sender)
-        const [x, y] = window && !window.isDestroyed() ? window.getPosition() : [0, 0]
-        return { x, y }
-      })
-
-      // La interfaz mueve la ventana (arrastre por pulsación larga sobre el post-it).
-      ipcMain.on('widgets:mover', (event, pos: { x: number; y: number }) => {
+      // Mover la ventana manteniendo pulsado el clic sobre el post-it. La posición se calcula
+      // aquí con la del cursor en la pantalla (la que da el sistema), no con la que ve la página,
+      // que va un instante atrasada cuando la propia ventana se está moviendo.
+      ipcMain.on('widgets:mover-inicio', (event) => {
         const window = BrowserWindow.fromWebContents(event.sender)
         if (!window || window.isDestroyed()) return
-        if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) return
-        window.setPosition(Math.round(pos.x), Math.round(pos.y))
+        stopMoving(window)
+        const startCursor = screen.getCursorScreenPoint()
+        const [startX, startY] = window.getPosition()
+        const startedAt = Date.now()
+        const timer = setInterval(() => {
+          // Por seguridad: si no llega el aviso de soltar el clic, se para solo.
+          if (window.isDestroyed() || Date.now() - startedAt > MAX_MOVE_MS) {
+            stopMoving(window)
+            return
+          }
+          const cursor = screen.getCursorScreenPoint()
+          const x = startX + cursor.x - startCursor.x
+          const y = startY + cursor.y - startCursor.y
+          const [currentX, currentY] = window.getPosition()
+          if (x !== currentX || y !== currentY) window.setPosition(x, y)
+        }, 8)
+        moving.set(window, timer)
+      })
+      ipcMain.on('widgets:mover-fin', (event) => {
+        stopMoving(BrowserWindow.fromWebContents(event.sender))
       })
 
       // Botón "Restablecer tamaño de notas" de la ventana principal: todos los post-its de

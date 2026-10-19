@@ -182,10 +182,28 @@
     border-top-left-radius: 4px;
   }
 
-  /* Zona del post-it que se desplaza cuando el contenido no cabe (barras finas, del color de la tinta). */
-  .postit-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklab, var(--note-ink) 40%, transparent) transparent;
+  /* Zona del post-it que se desplaza cuando el contenido no cabe: barras finas, del color de la tinta. */
+  .postit-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .postit-scroll::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--note-ink) 40%, transparent);
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background-clip: content-box;
+  }
+  .postit-scroll::-webkit-scrollbar-track,
+  .postit-scroll::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* En el post-it de escritorio, la barra vertical empieza por debajo de la X de cerrar. */
+  html.widget .postit-scroll::-webkit-scrollbar-track:vertical {
+    margin-top: 30px;
+  }
+  /* Y la horizontal acaba antes de la esquina doblada. */
+  .postit-scroll::-webkit-scrollbar-track:horizontal {
+    margin-right: 26px;
   }
 
   /* Sombra del post-it (sigue la forma recortada, con la esquina doblada). */

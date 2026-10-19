@@ -10,6 +10,7 @@ const TOLERANCE_PX = 8
  * Mover la ventana de un post-it de escritorio manteniendo pulsado el clic en cualquier parte
  * de la nota, igual que se mueven los post-its en la ventana principal. No funciona sobre las
  * tareas (ahí el arrastre cambia el orden), ni sobre botones, campos, asas ni barras de desplazamiento.
+ * El movimiento en sí lo hace el proceso principal siguiendo al cursor.
  */
 export function useWindowLongPressDrag(enabled: boolean): {
   moving: boolean
@@ -36,17 +37,12 @@ export function useWindowLongPressDrag(enabled: boolean): {
     }
 
     const startClient = { x: e.clientX, y: e.clientY }
-    const startScreen = { x: e.screenX, y: e.screenY }
-    // La posición de la ventana se le pide al sistema (window.screenX puede ir un instante atrasado).
-    let startWindow: { x: number; y: number } | undefined
-    void window.api.getWidgetPosition().then((position) => {
-      startWindow = position
-    })
     let active = false
 
     const timer = setTimeout(() => {
       active = true
       setMoving(true)
+      window.api.startWidgetMove()
     }, HOLD_MS)
 
     const stop = (): void => {
@@ -54,24 +50,26 @@ export function useWindowLongPressDrag(enabled: boolean): {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', stop)
       window.removeEventListener('pointercancel', stop)
+      window.removeEventListener('blur', stop)
+      if (active) window.api.endWidgetMove()
       setMoving(false)
     }
     const move = (event: PointerEvent): void => {
+      // Si el botón ya no está pulsado (se soltó fuera de la ventana), se termina.
+      if (event.buttons === 0 && event.pointerType === 'mouse') {
+        stop()
+        return
+      }
       if (!active) {
         // Si el cursor se mueve antes de que pase el tiempo, no era un arrastre.
         const distance = Math.hypot(event.clientX - startClient.x, event.clientY - startClient.y)
         if (distance > TOLERANCE_PX) stop()
-        return
       }
-      if (!startWindow) return
-      window.api.moveWidget(
-        startWindow.x + event.screenX - startScreen.x,
-        startWindow.y + event.screenY - startScreen.y
-      )
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', stop)
     window.addEventListener('pointercancel', stop)
+    window.addEventListener('blur', stop)
   }
 
   return { moving, onPointerDown }

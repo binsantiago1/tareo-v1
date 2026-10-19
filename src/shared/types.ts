@@ -90,10 +90,9 @@ export interface DataApi {
   resetAllWidgetSizes: () => Promise<void>
   /** Avisa a un post-it de escritorio de que su tamaño se restableció desde la ventana principal. */
   onWidgetSizeReset: (callback: () => void) => () => void
-  /** Mueve la ventana de este post-it de escritorio a esa posición de la pantalla. */
-  moveWidget: (x: number, y: number) => void
-  /** Posición actual de la ventana de este post-it de escritorio (la que conoce el sistema). */
-  getWidgetPosition: () => Promise<{ x: number; y: number }>
+  /** Empieza a mover la ventana de este post-it: sigue al cursor hasta que se llame a endWidgetMove. */
+  startWidgetMove: () => void
+  endWidgetMove: () => void
 }
 
 export type ExportResult =

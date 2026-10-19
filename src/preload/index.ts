@@ -31,8 +31,8 @@ const api: DataApi = {
     ipcRenderer.on('widgets:tamano-restablecido', listener)
     return () => ipcRenderer.removeListener('widgets:tamano-restablecido', listener)
   },
-  moveWidget: (x, y) => ipcRenderer.send('widgets:mover', { x, y }),
-  getWidgetPosition: () => ipcRenderer.invoke('widgets:posicion')
+  startWidgetMove: () => ipcRenderer.send('widgets:mover-inicio'),
+  endWidgetMove: () => ipcRenderer.send('widgets:mover-fin')
 }
 
 if (process.contextIsolated) {
