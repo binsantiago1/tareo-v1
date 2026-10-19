@@ -27,6 +27,8 @@ export interface Task {
   /** Posición dentro del área para el orden personalizado. */
   personalOrder: number
   subtasks: Subtask[]
+  /** Las subtareas están plegadas (ocultas) en el post-it. */
+  collapsed?: boolean
 }
 
 export interface Area {

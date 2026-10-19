@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ListPlus } from 'lucide-react'
+import { ChevronDown, ListPlus } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { Checkbox } from '@renderer/components/ui/checkbox'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
@@ -32,6 +32,7 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
   const removeTask = useDataStore((s) => s.removeTask)
   const addSubtask = useDataStore((s) => s.addSubtask)
   const reorderSubtasks = useDataStore((s) => s.reorderSubtasks)
+  const setCollapsed = useDataStore((s) => s.setCollapsed)
   const sensors = useLongPressSensors()
   const liRef = useRef<HTMLLIElement | null>(null)
   const leaving = useDataStore((s) => s.leaving[task.id] === true)
@@ -43,6 +44,7 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
   const doneCount = task.subtasks.filter((s) => s.completed).length
   const overdue = !task.completed && isOverdue(task.dueDate, todayString())
   const subtaskIds = task.subtasks.map((s) => s.id)
+  const collapsed = hasSubtasks && task.collapsed === true
 
   const handleSubtaskDragEnd = ({ active, over }: DragEndEvent): void => {
     if (!over || active.id === over.id) return
@@ -117,9 +119,22 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
               </span>
             )}
             {hasSubtasks && (
-              <span className="text-xs text-muted-foreground">
+              <button
+                type="button"
+                aria-expanded={!collapsed}
+                aria-label={`${collapsed ? 'Mostrar' : 'Ocultar'} las subtareas de «${task.title}»`}
+                title={collapsed ? 'Mostrar subtareas' : 'Ocultar subtareas'}
+                onClick={() => setCollapsed(task.id, !collapsed)}
+                className="-my-0.5 inline-flex items-center gap-0.5 rounded-md py-0.5 pr-0.5 pl-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+              >
                 {doneCount}/{task.subtasks.length}
-              </span>
+                <ChevronDown
+                  className={cn(
+                    'size-3.5 transition-transform duration-200 motion-reduce:transition-none',
+                    collapsed && '-rotate-90'
+                  )}
+                />
+              </button>
             )}
           </div>
           {task.note && (
@@ -136,7 +151,10 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
             className="size-7"
             aria-label={`Añadir subtarea a «${task.title}»`}
             title="Añadir subtarea"
-            onClick={() => setAddingSubtask(true)}
+            onClick={() => {
+              if (collapsed) setCollapsed(task.id, false)
+              setAddingSubtask(true)
+            }}
           >
             <ListPlus className="size-4" />
           </Button>
@@ -149,30 +167,41 @@ export function TaskItem({ task, drag }: Props): React.JSX.Element {
       </div>
 
       {(hasSubtasks || addingSubtask) && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleSubtaskDragEnd}
+        <div
+          className={cn(
+            'grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none',
+            collapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+          )}
+          // Plegadas, las subtareas no reciben foco ni clics.
+          inert={collapsed}
         >
-          <SortableContext items={subtaskIds} strategy={verticalListSortingStrategy}>
-            <ul className="ml-6 grid gap-1 border-l pl-3">
-              {task.subtasks.map((sub) => (
-                <SortableSubtask key={sub.id} task={task} subtask={sub} overdue={overdue} />
-              ))}
-              {addingSubtask && (
-                <li>
-                  <QuickAdd
-                    autoFocus
-                    label={`Nueva subtarea de «${task.title}»`}
-                    placeholder="Nueva subtarea"
-                    onAdd={(title) => addSubtask(task.id, title)}
-                    onCancel={() => setAddingSubtask(false)}
-                  />
-                </li>
-              )}
-            </ul>
-          </SortableContext>
-        </DndContext>
+          <div className="min-h-0 overflow-hidden">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleSubtaskDragEnd}
+            >
+              <SortableContext items={subtaskIds} strategy={verticalListSortingStrategy}>
+                <ul className="ml-6 grid gap-1 border-l pl-3">
+                  {task.subtasks.map((sub) => (
+                    <SortableSubtask key={sub.id} task={task} subtask={sub} overdue={overdue} />
+                  ))}
+                  {addingSubtask && (
+                    <li>
+                      <QuickAdd
+                        autoFocus
+                        label={`Nueva subtarea de «${task.title}»`}
+                        placeholder="Nueva subtarea"
+                        onAdd={(title) => addSubtask(task.id, title)}
+                        onCancel={() => setAddingSubtask(false)}
+                      />
+                    </li>
+                  )}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
       )}
 
       <ItemDialog

@@ -92,6 +92,8 @@ interface DataState {
   /** Pone las subtareas de una tarea en el orden dado (lista de ids). */
   reorderSubtasks: (taskId: string, orderedIds: string[]) => void
   toggleSubtask: (taskId: string, subtaskId: string) => void
+  /** Pliega o despliega las subtareas de una tarea. */
+  setCollapsed: (taskId: string, collapsed: boolean) => void
 }
 
 // Estado interno del guardado y de la escucha de otras ventanas.
@@ -389,6 +391,9 @@ export const useDataStore = create<DataState>((set, get) => {
 
     removeSubtask: (taskId, subtaskId) =>
       changeTask(taskId, (t) => removeSubtaskFrom(t, subtaskId, now())),
+
+    setCollapsed: (taskId, collapsed) =>
+      changeTask(taskId, (t) => ({ ...t, collapsed: collapsed || undefined })),
 
     reorderSubtasks: (taskId, orderedIds) =>
       changeTask(taskId, (t) => ({
