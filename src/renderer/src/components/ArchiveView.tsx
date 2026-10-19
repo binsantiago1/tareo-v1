@@ -5,8 +5,16 @@ import { AreaTag } from '@renderer/components/AreaTag'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { PriorityMark } from '@renderer/components/PriorityMark'
 import { formatCompletedDate } from '@renderer/lib/dates'
+import { ARCHIVE_DAYS, archiveDaysLeft } from '../../../shared/archive'
 import { useDataStore } from '@renderer/store/useDataStore'
 import type { Task } from '../../../shared/types'
+
+/** «Se borra en 3 días» (o «hoy» si ya le queda menos de un día). */
+function deletionText(days: number | undefined): string {
+  if (days === undefined) return ''
+  if (days <= 1) return 'Se borra hoy o mañana'
+  return `Se borra en ${days} días`
+}
 
 /** Archivo: tareas completadas. Se pueden restaurar o borrar definitivamente. */
 export function ArchiveView(): React.JSX.Element {
@@ -14,6 +22,8 @@ export function ArchiveView(): React.JSX.Element {
   const restoreTask = useDataStore((s) => s.restoreTask)
   const removeTask = useDataStore((s) => s.removeTask)
   const [deleting, setDeleting] = useState<Task | null>(null)
+  // "Ahora" se fija al abrir el Archivo (así el cálculo de días que quedan no cambia al volver a pintar).
+  const [now] = useState(() => Date.now())
 
   const areas = useMemo(() => new Map(data.areas.map((a) => [a.id, a])), [data.areas])
   // Las más recientes primero.
@@ -39,7 +49,10 @@ export function ArchiveView(): React.JSX.Element {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h2 className="mb-4 text-2xl font-semibold">Archivo</h2>
+      <h2 className="text-2xl font-semibold">Archivo</h2>
+      <p className="mt-1 mb-4 text-sm text-muted-foreground">
+        Las tareas se borran solas {ARCHIVE_DAYS} días después de archivarse.
+      </p>
       <ul className="grid gap-2">
         {archived.map((task) => (
           <li key={task.id} className="flex items-start gap-3 rounded-lg border bg-card p-3">
@@ -57,6 +70,7 @@ export function ArchiveView(): React.JSX.Element {
                   <span>Completada el {formatCompletedDate(task.completedAt)}</span>
                 )}
                 {task.subtasks.length > 0 && <span>{task.subtasks.length} subtareas</span>}
+                <span>{deletionText(archiveDaysLeft(task, now))}</span>
               </p>
               {task.note && (
                 <p className="mt-1 text-xs whitespace-pre-wrap break-words text-muted-foreground">

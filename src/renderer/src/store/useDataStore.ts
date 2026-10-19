@@ -16,6 +16,7 @@ import {
   toggleSubtaskCompleted,
   toggleTaskCompleted
 } from '../../../shared/taskRules'
+import { isArchiveExpired } from '../../../shared/archive'
 
 interface AreaValues {
   name: string
@@ -92,12 +93,16 @@ interface DataState {
   /** Pone las subtareas de una tarea en el orden dado (lista de ids). */
   reorderSubtasks: (taskId: string, orderedIds: string[]) => void
   toggleSubtask: (taskId: string, subtaskId: string) => void
+  /** Borra las tareas que llevan más de 7 días en el Archivo. */
+  purgeExpiredArchive: () => void
   /** Pliega o despliega las subtareas de una tarea. */
   setCollapsed: (taskId: string, collapsed: boolean) => void
 }
 
 // Estado interno del guardado y de la escucha de otras ventanas.
 let listening = false
+let purgeTimer: ReturnType<typeof setInterval> | undefined
+const PURGE_EVERY_MS = 60 * 60 * 1000
 let skipNextSave = false
 
 /** Tiempo que una tarea completada sigue a la vista (con el aviso "Deshacer"). */
@@ -159,6 +164,12 @@ export const useDataStore = create<DataState>((set, get) => {
     init: async () => {
       const { data, warning } = await window.api.loadData()
       set({ data, warning, loaded: true })
+      // Las tareas archivadas se borran solas a los 7 días: al abrir y, si la app sigue abierta
+      // (por ejemplo con post-its en el escritorio), cada hora.
+      get().purgeExpiredArchive()
+      if (!purgeTimer) {
+        purgeTimer = setInterval(() => get().purgeExpiredArchive(), PURGE_EVERY_MS)
+      }
       // Se escuchan los cambios que hacen las otras ventanas (principal y post-its de escritorio).
       if (!listening) {
         listening = true
@@ -391,6 +402,13 @@ export const useDataStore = create<DataState>((set, get) => {
 
     removeSubtask: (taskId, subtaskId) =>
       changeTask(taskId, (t) => removeSubtaskFrom(t, subtaskId, now())),
+
+    purgeExpiredArchive: () => {
+      const { data } = get()
+      const now = Date.now()
+      const tasks = data.tasks.filter((t) => !isArchiveExpired(t, now))
+      if (tasks.length !== data.tasks.length) set({ data: { ...data, tasks } })
+    },
 
     setCollapsed: (taskId, collapsed) =>
       changeTask(taskId, (t) => ({ ...t, collapsed: collapsed || undefined })),
