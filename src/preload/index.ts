@@ -20,7 +20,11 @@ const api: DataApi = {
   },
   pinWidget: (areaId) => ipcRenderer.invoke('widgets:fijar', areaId),
   unpinWidget: (areaId) => ipcRenderer.invoke('widgets:quitar', areaId),
-  setWidgetHeight: (height) => ipcRenderer.send('widgets:altura', height)
+  reportWidgetHeight: (content, overlay) =>
+    ipcRenderer.send('widgets:altura', { content, overlay }),
+  getWidgetInfo: () => ipcRenderer.invoke('widgets:info'),
+  setWidgetSize: (width, height) => ipcRenderer.send('widgets:tamano', { width, height }),
+  resetWidgetSize: () => ipcRenderer.send('widgets:tamano-auto')
 }
 
 if (process.contextIsolated) {

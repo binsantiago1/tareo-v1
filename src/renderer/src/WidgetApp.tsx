@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AreaDialog } from '@renderer/components/AreaDialog'
 import { PostIt } from '@renderer/components/PostIt'
 import { useTheme } from '@renderer/lib/theme'
+import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { DEFAULT_NOTE_COLOR } from '../../shared/palette'
 
@@ -20,11 +21,14 @@ export default function WidgetApp({ areaId }: { areaId: string }): React.JSX.Ele
   const init = useDataStore((s) => s.init)
   const updateArea = useDataStore((s) => s.updateArea)
   const [editing, setEditing] = useState(false)
+  // null = todavía no se sabe; true = el usuario fijó el tamaño con las asas; false = se ajusta solo
+  const [userSized, setUserSized] = useState<boolean | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   useTheme() // aplica el tema (y lo sigue si se cambia en la ventana principal)
 
   useEffect(() => {
     void init()
+    void window.api.getWidgetInfo().then((info) => setUserSized(info.userSized))
   }, [init])
 
   const area = data.areas.find((a) => a.id === areaId)
@@ -43,7 +47,9 @@ export default function WidgetApp({ areaId }: { areaId: string }): React.JSX.Ele
         : document.querySelector('[role="menu"]')
           ? MENU_MIN_HEIGHT
           : 0
-      window.api.setWidgetHeight(Math.max(Math.ceil(root.getBoundingClientRect().height), overlay))
+      // Con el tamaño fijado a mano, el contenido no manda: solo se avisa de los menús abiertos.
+      const content = userSized ? 0 : Math.ceil(root.getBoundingClientRect().height)
+      window.api.reportWidgetHeight(content, overlay)
     }
     const resize = new ResizeObserver(report)
     resize.observe(root)
@@ -54,18 +60,32 @@ export default function WidgetApp({ areaId }: { areaId: string }): React.JSX.Ele
       resize.disconnect()
       mutation.disconnect()
     }
-  }, [hasArea])
+  }, [hasArea, userSized])
 
   // Si el área se borra, el proceso principal cierra esta ventana.
-  if (!loaded || !area) return null
+  if (!loaded || !area || userSized === null) return null
 
   return (
     <>
-      <div ref={rootRef} className="p-4">
+      <div ref={rootRef} className={cn('box-border p-4', userSized && 'h-screen')}>
         <PostIt
           area={area}
           tasks={tasks}
           widget={{ onClose: () => void window.api.unpinWidget(area.id) }}
+          frame={{ width: '100%', height: userSized ? '100%' : undefined }}
+          resize={{
+            min: { width: 200, height: 120 },
+            max: { width: 2400, height: 2400 },
+            // La ventana mide lo que el post-it más su margen transparente (16 a cada lado).
+            onResize: (size) => {
+              setUserSized(true)
+              window.api.setWidgetSize(Math.round(size.width + 32), Math.round(size.height + 32))
+            },
+            onReset: () => {
+              setUserSized(false)
+              window.api.resetWidgetSize()
+            }
+          }}
           onEdit={() => setEditing(true)}
         />
       </div>

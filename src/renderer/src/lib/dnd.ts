@@ -3,7 +3,7 @@ import type { PointerEvent } from 'react'
 
 /** Elementos con su propia función: pulsarlos nunca empieza un arrastre. */
 const INTERACTIVE =
-  'input, textarea, select, button, a, label, [role="switch"], [role="menuitem"], [contenteditable="true"]'
+  'input, textarea, select, button, a, label, [role="switch"], [role="menuitem"], [contenteditable="true"], [data-resize-handle]'
 
 /** Tiempo que hay que mantener pulsado antes de poder arrastrar. */
 const HOLD_MS = 250

@@ -126,7 +126,7 @@ function App(): React.JSX.Element {
             onDragEnd={handleAreaDragEnd}
           >
             <SortableContext items={areas.map((a) => a.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] items-start gap-4">
+              <div className="flex flex-wrap items-start gap-4">
                 {areas.map((area) => (
                   <SortablePostIt
                     key={area.id}

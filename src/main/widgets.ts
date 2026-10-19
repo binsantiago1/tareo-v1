@@ -3,14 +3,32 @@ import { promises as fs } from 'fs'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 
-/** Ancho de la ventana: 320 de post-it + 16 de margen a cada lado (para que quepa la sombra). */
-const WIDGET_WIDTH = 352
-const MIN_HEIGHT = 120
+/** Margen transparente alrededor del post-it (para que quepa la sombra), a cada lado. */
+const MARGIN = 16
+/** Tamaño de ventana por defecto: 320 de post-it + el margen. */
+const DEFAULT_WIDTH = 320 + MARGIN * 2
+const DEFAULT_HEIGHT = 260
+const MIN_WIDTH = 200 + MARGIN * 2
+const MIN_HEIGHT = 120 + MARGIN * 2
 
 interface PinnedWidget {
   areaId: string
   x?: number
   y?: number
+  /** Tamaño de la ventana si el usuario lo cambió a mano. */
+  width?: number
+  height?: number
+  userSized?: boolean
+}
+
+/** Tamaño "deseado" de cada ventana (sin contar lo que crece temporalmente por un menú). */
+interface WidgetLayout {
+  width: number
+  height: number
+  /** true si lo fijó el usuario con las asas; false = la altura se ajusta sola al contenido. */
+  userSized: boolean
+  /** Altura mínima mientras haya un menú o diálogo abierto (0 = ninguno). */
+  overlayMin: number
 }
 
 interface Options {
@@ -23,7 +41,7 @@ interface Options {
 
 /**
  * Post-its de escritorio: una ventana flotante sin marco por cada área fijada.
- * Se recuerdan en `widgets.json` (con su posición) y se vuelven a abrir al iniciar la app.
+ * Se recuerdan en `widgets.json` (con su posición y tamaño) y se vuelven a abrir al iniciar la app.
  * Mientras haya alguno fijado, la app sigue viva en segundo plano (icono junto al reloj) y
  * se registra para arrancar con Windows.
  */
@@ -36,6 +54,7 @@ export function createWidgetManager(options: Options): {
   const file = join(options.dataDir, 'widgets.json')
   let pinned: PinnedWidget[] = []
   const windows = new Map<string, BrowserWindow>()
+  const layouts = new Map<string, WidgetLayout>()
   let tray: Tray | null = null
   let knownAreaIds: Set<string> | null = null
 
@@ -86,9 +105,14 @@ export function createWidgetManager(options: Options): {
       tray.destroy()
       tray = null
     }
-    // Solo en la app instalada (en desarrollo no se toca la configuración de Windows).
+    // Solo en la app empaquetada (en desarrollo no se toca la configuración de Windows).
     if (app.isPackaged) {
-      app.setLoginItemSettings({ openAtLogin: pinned.length > 0, args: ['--widgets'] })
+      app.setLoginItemSettings({
+        openAtLogin: pinned.length > 0,
+        // En la versión portable, el .exe real es el que indica esta variable (no el temporal).
+        path: process.env['PORTABLE_EXECUTABLE_FILE'] ?? process.execPath,
+        args: ['--widgets']
+      })
     }
   }
 
@@ -109,9 +133,61 @@ export function createWidgetManager(options: Options): {
   function defaultPosition(index: number): { x: number; y: number } {
     const area = screen.getPrimaryDisplay().workArea
     return {
-      x: area.x + area.width - WIDGET_WIDTH - 24 - (index % 4) * 30,
+      x: area.x + area.width - DEFAULT_WIDTH - 24 - (index % 4) * 30,
       y: area.y + 70 + (index % 8) * 36
     }
+  }
+
+  /** Pone la ventana en el tamaño deseado (más lo que necesite un menú abierto), dentro de la pantalla. */
+  function applyLayout(areaId: string): void {
+    const window = windows.get(areaId)
+    const layout = layouts.get(areaId)
+    if (!window || window.isDestroyed() || !layout) return
+    const bounds = window.getBounds()
+    const area = screen.getDisplayMatching(bounds).workArea
+    const width = Math.round(Math.min(Math.max(layout.width, MIN_WIDTH), area.width - 20))
+    const height = Math.round(
+      Math.min(Math.max(layout.height, layout.overlayMin, MIN_HEIGHT), area.height - 20)
+    )
+    // Si al crecer se saldría de la pantalla, la ventana se desplaza lo necesario.
+    const x = Math.max(area.x, Math.min(bounds.x, area.x + area.width - width))
+    const y = Math.max(area.y, Math.min(bounds.y, area.y + area.height - height))
+    if (x === bounds.x && y === bounds.y && width === bounds.width && height === bounds.height) {
+      return
+    }
+    window.setBounds({ x, y, width, height }, false)
+  }
+
+  /** Guarda (sin prisa) la posición y el tamaño de un post-it. */
+  const timers = new Map<string, NodeJS.Timeout>()
+  function rememberLater(areaId: string): void {
+    clearTimeout(timers.get(areaId))
+    timers.set(
+      areaId,
+      setTimeout(() => {
+        const window = windows.get(areaId)
+        const entry = pinned.find((p) => p.areaId === areaId)
+        const layout = layouts.get(areaId)
+        if (!window || window.isDestroyed() || !entry || !layout) return
+        const [x, y] = window.getPosition()
+        entry.x = x
+        entry.y = y
+        entry.userSized = layout.userSized
+        if (layout.userSized) {
+          entry.width = layout.width
+          entry.height = layout.height
+        } else {
+          delete entry.width
+          delete entry.height
+        }
+        void save()
+      }, 400)
+    )
+  }
+
+  function areaIdOf(window: BrowserWindow | null): string | undefined {
+    for (const [areaId, w] of windows) if (w === window) return areaId
+    return undefined
   }
 
   function openWindow(widget: PinnedWidget): void {
@@ -120,14 +196,23 @@ export function createWidgetManager(options: Options): {
     const saved =
       widget.x !== undefined && widget.y !== undefined ? visiblePosition(widget.x, widget.y) : null
     const position = saved ?? defaultPosition(index)
+    const layout: WidgetLayout = {
+      width: widget.userSized && widget.width ? widget.width : DEFAULT_WIDTH,
+      height: widget.userSized && widget.height ? widget.height : DEFAULT_HEIGHT,
+      userSized: widget.userSized === true,
+      overlayMin: 0
+    }
+    layouts.set(widget.areaId, layout)
 
     const window = new BrowserWindow({
       ...position,
-      width: WIDGET_WIDTH,
-      height: 260,
+      width: layout.width,
+      height: layout.height,
       useContentSize: true,
       frame: false,
       transparent: true,
+      // El sistema no deja redimensionar ventanas transparentes: el tamaño lo cambian las asas
+      // del propio post-it, que piden el nuevo tamaño al proceso principal.
       resizable: false,
       maximizable: false,
       minimizable: false,
@@ -141,25 +226,12 @@ export function createWidgetManager(options: Options): {
     })
     windows.set(widget.areaId, window)
     window.on('ready-to-show', () => window.showInactive())
-    window.on('closed', () => windows.delete(widget.areaId))
-
-    // Se recuerda dónde dejó el usuario cada post-it.
-    let timer: NodeJS.Timeout | undefined
-    const remember = (): void => {
-      clearTimeout(timer)
-      timer = setTimeout(() => {
-        if (window.isDestroyed()) return
-        const [x, y] = window.getPosition()
-        const entry = pinned.find((p) => p.areaId === widget.areaId)
-        if (entry) {
-          entry.x = x
-          entry.y = y
-          void save()
-        }
-      }, 400)
-    }
-    window.on('moved', remember)
-    window.on('move', remember)
+    window.on('closed', () => {
+      windows.delete(widget.areaId)
+      layouts.delete(widget.areaId)
+    })
+    window.on('moved', () => rememberLater(widget.areaId))
+    window.on('move', () => rememberLater(widget.areaId))
 
     const hash = `/widget/${widget.areaId}`
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -173,6 +245,7 @@ export function createWidgetManager(options: Options): {
     const window = windows.get(areaId)
     if (window && !window.isDestroyed()) window.destroy()
     windows.delete(areaId)
+    layouts.delete(areaId)
   }
 
   async function pin(areaId: string): Promise<void> {
@@ -202,16 +275,46 @@ export function createWidgetManager(options: Options): {
       ipcMain.handle('widgets:listar', () => pinned.map((p) => p.areaId))
       ipcMain.handle('widgets:fijar', (_event, areaId: string) => pin(areaId))
       ipcMain.handle('widgets:quitar', (_event, areaId: string) => unpin(areaId))
-      ipcMain.on('widgets:altura', (event, height: number) => {
-        const window = BrowserWindow.fromWebContents(event.sender)
-        if (!window || window.isDestroyed() || !Number.isFinite(height)) return
-        const area = screen.getDisplayMatching(window.getBounds()).workArea
-        const max = Math.max(MIN_HEIGHT, area.height - 20)
-        const next = Math.round(Math.min(Math.max(height, MIN_HEIGHT), max))
-        const bounds = window.getBounds()
-        // Si al crecer se saldría por abajo de la pantalla, la ventana sube lo necesario.
-        const y = Math.max(area.y, Math.min(bounds.y, area.y + area.height - next))
-        window.setBounds({ x: bounds.x, y, width: WIDGET_WIDTH, height: next }, false)
+
+      // ¿Esta ventana tiene tamaño fijado por el usuario o se ajusta sola?
+      ipcMain.handle('widgets:info', (event) => {
+        const areaId = areaIdOf(BrowserWindow.fromWebContents(event.sender))
+        return { userSized: areaId ? (layouts.get(areaId)?.userSized ?? false) : false }
+      })
+
+      // La interfaz informa de cuánto mide su contenido y de si hay un menú o diálogo abierto.
+      ipcMain.on('widgets:altura', (event, payload: { content: number; overlay: number }) => {
+        const areaId = areaIdOf(BrowserWindow.fromWebContents(event.sender))
+        const layout = areaId ? layouts.get(areaId) : undefined
+        if (!areaId || !layout || !Number.isFinite(payload?.content)) return
+        if (!layout.userSized) layout.height = Math.max(payload.content, MIN_HEIGHT)
+        layout.overlayMin = Number.isFinite(payload.overlay) ? payload.overlay : 0
+        applyLayout(areaId)
+      })
+
+      // El usuario está cambiando el tamaño con las asas.
+      ipcMain.on('widgets:tamano', (event, size: { width: number; height: number }) => {
+        const areaId = areaIdOf(BrowserWindow.fromWebContents(event.sender))
+        const layout = areaId ? layouts.get(areaId) : undefined
+        if (!areaId || !layout || !Number.isFinite(size?.width) || !Number.isFinite(size?.height)) {
+          return
+        }
+        layout.userSized = true
+        layout.width = size.width
+        layout.height = size.height
+        applyLayout(areaId)
+        rememberLater(areaId)
+      })
+
+      // Doble clic en la esquina: vuelve al tamaño automático.
+      ipcMain.on('widgets:tamano-auto', (event) => {
+        const areaId = areaIdOf(BrowserWindow.fromWebContents(event.sender))
+        const layout = areaId ? layouts.get(areaId) : undefined
+        if (!areaId || !layout) return
+        layout.userSized = false
+        layout.width = DEFAULT_WIDTH
+        applyLayout(areaId)
+        rememberLater(areaId)
       })
     },
 

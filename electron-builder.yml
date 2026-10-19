@@ -20,6 +20,14 @@ win:
     - target: nsis
       arch:
         - x64
+    # Versión portable: un único .exe que se ejecuta sin instalar (para pasárselo a otra persona).
+    - target: portable
+      arch:
+        - x64
+portable:
+  artifactName: Pendientes-Portable-${version}.${ext}
+  # No pide permisos de administrador: sirve en ordenadores de trabajo donde no se puede instalar.
+  requestExecutionLevel: user
 nsis:
   artifactName: Pendientes-Instalador-${version}.${ext}
   shortcutName: Pendientes

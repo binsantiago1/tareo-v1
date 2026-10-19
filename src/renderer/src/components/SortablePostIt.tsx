@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { PostIt } from '@renderer/components/PostIt'
+import { useDataStore } from '@renderer/store/useDataStore'
 import type { Area, Task } from '../../../shared/types'
 
 interface Props {
@@ -10,10 +12,16 @@ interface Props {
   onDelete: () => void
 }
 
+/** Ancho de un post-it nuevo en la ventana principal. */
+const DEFAULT_WIDTH = 300
+
 const TILTS = ['-0.5deg', '0.4deg', '-0.2deg', '0.55deg']
 
 /** Post-it que se puede mover de sitio manteniendo pulsado el clic (vista Lista). */
 export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Element {
+  const setAreaSize = useDataStore((state) => state.setAreaSize)
+  // Mientras se arrastra un asa, el tamaño se ve al momento pero solo se guarda al soltar.
+  const [live, setLive] = useState<{ width: number; height: number } | null>(null)
   const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: area.id
   })
@@ -24,6 +32,26 @@ export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.
       tasks={tasks}
       onEdit={onEdit}
       onDelete={onDelete}
+      frame={{
+        width: live?.width ?? area.width ?? DEFAULT_WIDTH,
+        height: live?.height ?? area.height
+      }}
+      resize={{
+        min: { width: 200, height: 120 },
+        max: { width: 1400, height: 2400 },
+        onResize: (size, final) => {
+          if (final) {
+            setLive(null)
+            setAreaSize(area.id, size)
+          } else {
+            setLive(size)
+          }
+        },
+        onReset: () => {
+          setLive(null)
+          setAreaSize(area.id, {})
+        }
+      }}
       drag={{
         setNodeRef,
         isDragging,

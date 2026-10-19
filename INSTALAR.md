@@ -25,3 +25,14 @@ En un post-it, pasa el cursor por el título → icono de tres puntos → **Pone
 - La **X** de la esquina superior derecha (aparece al pasar el cursor) la quita del escritorio; el área no se borra.
 - Se recuerdan al reiniciar Windows: la app arranca en segundo plano (icono junto al reloj) y solo muestran los post-its. Clic en ese icono para abrir la ventana principal; clic derecho → **Salir** para cerrar todo.
 - Solo funciona así en la app **instalada** (el arranque con Windows no se configura al ejecutar `npm run dev`).
+
+## Versión portable (para pasarla a otra persona)
+`npm run build:win` genera dos archivos en `dist`:
+- `Pendientes-Instalador-1.0.0.exe`: se instala (acceso directo, desinstalador).
+- `Pendientes-Portable-1.0.0.exe`: un solo archivo que se ejecuta con doble clic, **sin instalar y sin permisos de administrador**. Se puede enviar tal cual.
+
+La portable es igual de funcional (post-its de escritorio, copias de seguridad, etc.). Detalles:
+- Guarda los datos de cada persona en `C:\Users\<usuario>\AppData\Roaming\Pendientes` (los tuyos no viajan con el archivo).
+- Arranca algo más lento que la instalada (se descomprime al abrirse).
+- Si fija post-its en el escritorio, se registra para arrancar con Windows apuntando al `.exe` portable: **no hay que moverlo ni borrarlo** de donde esté (por ejemplo, mejor en `Documentos`, no en Descargas).
+- Windows puede mostrar «Windows protegió su PC» (no tiene firma digital de pago): Más información → Ejecutar de todas formas. Algunos ordenadores de empresa bloquean `.exe` no firmados; en ese caso hay que pedir permiso a Informática.

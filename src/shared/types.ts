@@ -36,6 +36,9 @@ export interface Area {
   /** Posición del post-it. */
   order: number
   sortCriterion: SortCriterion
+  /** Tamaño del post-it en la ventana principal, en píxeles (si se cambió a mano). */
+  width?: number
+  height?: number
   /** Color del post-it (id de la paleta). Las áreas antiguas pueden no tenerlo. */
   color?: string
 }
@@ -75,8 +78,14 @@ export interface DataApi {
   pinWidget: (areaId: string) => Promise<void>
   /** Quita el post-it del escritorio (el área no se borra). */
   unpinWidget: (areaId: string) => Promise<void>
-  /** Un post-it de escritorio pide que su ventana tenga esta altura (en píxeles). */
-  setWidgetHeight: (height: number) => void
+  /** El post-it de escritorio informa de lo que mide su contenido y de si hay un menú/diálogo abierto. */
+  reportWidgetHeight: (content: number, overlay: number) => void
+  /** ¿Este post-it de escritorio tiene un tamaño fijado a mano (o se ajusta solo al contenido)? */
+  getWidgetInfo: () => Promise<{ userSized: boolean }>
+  /** El usuario cambió el tamaño de este post-it de escritorio con las asas (tamaño de la ventana). */
+  setWidgetSize: (width: number, height: number) => void
+  /** Vuelve al tamaño automático. */
+  resetWidgetSize: () => void
 }
 
 export type ExportResult =
