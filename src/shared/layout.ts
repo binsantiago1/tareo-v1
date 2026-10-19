@@ -1,82 +1,103 @@
-/** Ancho de una celda (y ancho por defecto de un post-it), en píxeles. */
+/** Ancho mínimo de una columna (y ancho por defecto de un post-it), en píxeles. */
 export const NOTE_WIDTH = 300
-/** Separación entre celdas, en píxeles. */
+/** Separación entre columnas y entre notas, en píxeles. */
 export const CELL_GAP = 16
-
-export interface Placement {
-  col: number
-  row: number
-  /** Cuántas columnas ocupa (un post-it más ancho que una celda ocupa varias). */
-  span: number
-}
 
 export interface LayoutItem {
   id: string
-  /** Posición guardada (0 = primera columna / primera fila). Sin ella, se coloca sola. */
+  /** Columna guardada (0 = la primera). Sin ella, la nota se coloca sola. */
   col?: number
+  /** Orden dentro de su columna (0 = arriba del todo). */
   row?: number
-  /** Ancho del post-it en píxeles (por defecto, el de una celda). */
+  /** Ancho del post-it en píxeles (por defecto, el de una columna). */
   width?: number
 }
 
-/** Columnas que ocupa un post-it del ancho dado. */
-export function spanFor(width: number | undefined, columns: number): number {
-  const span = Math.ceil((width ?? NOTE_WIDTH) / (NOTE_WIDTH + CELL_GAP))
-  return Math.min(Math.max(span, 1), Math.max(columns, 1))
-}
-
-/** Cuántas columnas caben en un ancho disponible (en píxeles). */
-export function columnsFor(availableWidth: number): number {
-  return Math.max(Math.floor((availableWidth + CELL_GAP) / (NOTE_WIDTH + CELL_GAP)), 1)
+export interface BoardColumn {
+  index: number
+  /** Ancho de la columna: el de su nota más ancha (nunca menos que NOTE_WIDTH). */
+  width: number
+  /** Notas de arriba abajo. */
+  ids: string[]
 }
 
 /**
- * Coloca los post-its en una cuadrícula de celdas, como en una hoja de cálculo:
- * - Cada nota con posición guardada va a su celda, si cabe y está libre.
- * - Si no (la ventana se hizo estrecha, o dos notas coinciden), pasa a la primera celda libre.
- * - Las notas sin posición (nuevas o antiguas) rellenan las primeras celdas libres.
- * Las celdas vacías se respetan: se pueden dejar huecos.
- * `items` va en el orden "natural" (el de creación o el que tuvieran antes).
+ * Organiza los post-its en columnas, como un tablero:
+ * - Cada columna tiene el ancho de su nota más ancha, así que el espacio que ocupa una nota
+ *   ancha es de SU columna, no de la siguiente.
+ * - Dentro de una columna las notas van apiladas de arriba abajo, una pegada a la otra
+ *   (la altura de una nota no afecta a las columnas de al lado).
+ * - Cuántas columnas se ven depende del ancho disponible. Las notas que estaban en una columna
+ *   que ya no cabe (o que aún no tienen sitio) pasan a la columna con menos notas; su posición
+ *   guardada no cambia, así que al ensanchar la ventana vuelven a su sitio.
+ * `items` va en el orden "natural" (el de creación).
  */
-export function computeLayout(items: LayoutItem[], columns: number): Map<string, Placement> {
-  const cols = Math.max(columns, 1)
-  const result = new Map<string, Placement>()
-  const taken = new Set<string>()
-  const key = (row: number, col: number): string => `${row}:${col}`
-
-  const fits = (row: number, col: number, span: number): boolean => {
-    if (col < 0 || col + span > cols) return false
-    for (let c = col; c < col + span; c++) if (taken.has(key(row, c))) return false
-    return true
-  }
-  const occupy = (id: string, row: number, col: number, span: number): void => {
-    for (let c = col; c < col + span; c++) taken.add(key(row, c))
-    result.set(id, { col, row, span })
-  }
-  const firstFree = (span: number): { row: number; col: number } => {
-    for (let row = 0; ; row++) {
-      for (let col = 0; col + span <= cols; col++) if (fits(row, col, span)) return { row, col }
-    }
-  }
-
-  const placed = items
+export function computeBoard(items: LayoutItem[], availableWidth: number): BoardColumn[] {
+  const stored = items
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => item.col !== undefined && item.row !== undefined)
     .sort((a, b) => a.item.row! - b.item.row! || a.item.col! - b.item.col! || a.index - b.index)
+    .map(({ item }) => item)
   const unplaced = items.filter((item) => item.col === undefined || item.row === undefined)
 
-  for (const { item } of placed) {
-    const span = spanFor(item.width, cols)
-    if (fits(item.row!, item.col!, span)) occupy(item.id, item.row!, item.col!, span)
-    else {
-      const free = firstFree(span)
-      occupy(item.id, free.row, free.col, span)
-    }
+  // Ancho de cada columna según las notas que tiene guardadas.
+  const widthOf = new Map<number, number>()
+  for (const item of stored) {
+    const col = item.col!
+    widthOf.set(col, Math.max(widthOf.get(col) ?? NOTE_WIDTH, item.width ?? NOTE_WIDTH))
   }
-  for (const item of unplaced) {
-    const span = spanFor(item.width, cols)
-    const free = firstFree(span)
-    occupy(item.id, free.row, free.col, span)
+
+  // Cuántas columnas caben (siempre al menos una).
+  let count = 0
+  let used = 0
+  while (count < 200) {
+    const next = used + (count > 0 ? CELL_GAP : 0) + (widthOf.get(count) ?? NOTE_WIDTH)
+    if (next > availableWidth && count >= 1) break
+    used = next
+    count++
   }
+
+  const lists: LayoutItem[][] = Array.from({ length: count }, () => [])
+  const homeless: LayoutItem[] = []
+  for (const item of stored) {
+    if (item.col! < count) lists[item.col!].push(item)
+    else homeless.push(item)
+  }
+  // Las que no tienen sitio (o no caben) van a la columna con menos notas (a igualdad, la de más a la izquierda).
+  for (const item of [...homeless, ...unplaced]) {
+    let target = 0
+    for (let c = 1; c < count; c++) if (lists[c].length < lists[target].length) target = c
+    lists[target].push(item)
+  }
+
+  return lists.map((list, index) => ({
+    index,
+    ids: list.map((item) => item.id),
+    width: Math.max(NOTE_WIDTH, ...list.map((item) => item.width ?? NOTE_WIDTH))
+  }))
+}
+
+/**
+ * Posiciones nuevas al llevar una nota a una columna, en un hueco concreto
+ * (`index` = cuántas notas de esa columna quedan por encima, sin contar la que se mueve).
+ * Devuelve la posición (columna y orden) de TODAS las notas, para guardarlas fijas.
+ */
+export function moveNote(
+  columns: BoardColumn[],
+  id: string,
+  targetCol: number,
+  index: number
+): Record<string, { col: number; row: number }> {
+  const lists = columns.map((c) => c.ids.filter((other) => other !== id))
+  const target = Math.min(Math.max(targetCol, 0), lists.length - 1)
+  lists[target].splice(Math.min(Math.max(index, 0), lists[target].length), 0, id)
+  const result: Record<string, { col: number; row: number }> = {}
+  lists.forEach((list, col) => list.forEach((noteId, row) => (result[noteId] = { col, row })))
   return result
+}
+
+/** Cuántas notas de la columna quedan por encima de un punto (en vertical), sin contar la que se arrastra. */
+export function insertionIndex(noteMiddles: number[], pointerY: number): number {
+  const index = noteMiddles.findIndex((middle) => middle > pointerY)
+  return index === -1 ? noteMiddles.length : index
 }

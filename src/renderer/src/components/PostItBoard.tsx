@@ -1,14 +1,23 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { DndContext, pointerWithin, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  DndContext,
+  pointerWithin,
+  useDroppable,
+  type DragEndEvent,
+  type DragMoveEvent
+} from '@dnd-kit/core'
 import { PlacedPostIt } from '@renderer/components/PlacedPostIt'
 import { useLongPressSensors } from '@renderer/lib/dnd'
 import { cn } from '@renderer/lib/utils'
 import { useDataStore } from '@renderer/store/useDataStore'
-import { CELL_GAP, NOTE_WIDTH, columnsFor, computeLayout } from '../../../shared/layout'
+import {
+  CELL_GAP,
+  computeBoard,
+  insertionIndex,
+  moveNote,
+  type BoardColumn
+} from '../../../shared/layout'
 import type { Area, Task } from '../../../shared/types'
-
-/** Alto mínimo de una fila de celdas. */
-const MIN_ROW_HEIGHT = 96
 
 interface Props {
   /** Áreas en su orden natural (el de creación). */
@@ -18,89 +27,124 @@ interface Props {
   onDelete: (area: Area) => void
 }
 
-/** Una celda del tablero: solo se ve mientras se arrastra un post-it, y se resalta al pasar por encima. */
-function BoardCell({
-  col,
-  row,
-  dragging
-}: {
+interface DropTarget {
   col: number
-  row: number
+  /** Cuántas notas de esa columna quedan por encima del hueco. */
+  index: number
+}
+
+/** Línea que marca dónde va a quedar la nota que se está arrastrando. */
+function DropLine(): React.JSX.Element {
+  return <div className="h-1 shrink-0 rounded-full bg-foreground/60" aria-hidden="true" />
+}
+
+/** Una columna del tablero: las notas van apiladas de arriba abajo, pegadas unas a otras. */
+function ColumnView({
+  column,
+  dragging,
+  draggedId,
+  dropIndex,
+  renderNote
+}: {
+  column: BoardColumn
   dragging: boolean
+  draggedId: string | null
+  /** Hueco donde se soltaría la nota arrastrada (solo si es esta columna). */
+  dropIndex: number | null
+  renderNote: (id: string) => React.ReactNode
 }): React.JSX.Element {
-  const { setNodeRef, isOver } = useDroppable({ id: `cell-${col}-${row}` })
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${column.index}` })
+
+  // La línea se coloca entre las notas, sin contar la que se está arrastrando.
+  let above = 0
+  const children: React.ReactNode[] = []
+  for (const id of column.ids) {
+    if (id === draggedId) {
+      children.push(<Fragment key={id}>{renderNote(id)}</Fragment>)
+      continue
+    }
+    if (dropIndex === above) children.push(<DropLine key={`line-${above}`} />)
+    children.push(<Fragment key={id}>{renderNote(id)}</Fragment>)
+    above++
+  }
+  if (dropIndex !== null && dropIndex >= above) children.push(<DropLine key="line-end" />)
+
   return (
     <div
       ref={setNodeRef}
-      data-cell={`${col}-${row}`}
-      style={{ gridColumn: col + 1, gridRow: row + 1 }}
+      data-col={column.index}
+      style={{ width: column.width, gap: CELL_GAP }}
       className={cn(
-        'rounded-md border-2 border-dashed transition-colors motion-reduce:transition-none',
-        dragging ? 'border-foreground/20' : 'pointer-events-none border-transparent',
-        dragging && isOver && 'border-foreground/60 bg-foreground/10'
+        'flex shrink-0 flex-col rounded-md outline-2 outline-dashed transition-colors motion-reduce:transition-none',
+        dragging ? 'outline-foreground/20' : 'outline-transparent',
+        dragging && isOver && 'bg-foreground/5 outline-foreground/50'
       )}
-    />
+    >
+      {children}
+    </div>
   )
 }
 
 /**
- * Tablero de post-its como una hoja de cálculo: cada nota está en una celda (columna y fila),
- * se puede llevar a cualquier celda (si está ocupada, las dos notas se intercambian) y se pueden
- * dejar celdas vacías. Cuántas columnas hay depende del ancho de la ventana.
+ * Tablero de post-its por columnas:
+ * - Cada columna tiene el ancho de su nota más ancha y las notas se apilan una pegada a otra.
+ * - Se puede llevar una nota a cualquier columna y a cualquier altura (una línea marca el hueco);
+ *   se pueden dejar columnas vacías.
+ * - Cuántas columnas hay depende del ancho de la ventana.
  */
 export function PostItBoard({ areas, tasksOf, onEdit, onDelete }: Props): React.JSX.Element {
   const sensors = useLongPressSensors()
   const setAreaPositions = useDataStore((s) => s.setAreaPositions)
   const hostRef = useRef<HTMLDivElement>(null)
-  const [columns, setColumns] = useState(4)
-  const [dragging, setDragging] = useState(false)
+  const [availableWidth, setAvailableWidth] = useState(1200)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
 
   // Las columnas se ajustan al ancho de la ventana.
   useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
-    const update = (): void => setColumns(columnsFor(host.clientWidth))
+    const update = (): void => setAvailableWidth(host.clientWidth)
     update()
     const observer = new ResizeObserver(update)
     observer.observe(host)
     return () => observer.disconnect()
   }, [])
 
-  const layout = useMemo(
+  const columns = useMemo(
     () =>
-      computeLayout(
+      computeBoard(
         areas.map((a) => ({ id: a.id, col: a.col, row: a.row, width: a.width })),
-        columns
+        availableWidth
       ),
-    [areas, columns]
+    [areas, availableWidth]
   )
-  const usedRows = Math.max(...[...layout.values()].map((p) => p.row + 1), 0)
-  // Una fila más de la ocupada, para poder llevar una nota debajo del todo.
-  const rows = usedRows + 1
+  const areaById = useMemo(() => new Map(areas.map((a) => [a.id, a])), [areas])
 
-  const handleDragEnd = ({ active, over }: DragEndEvent): void => {
-    setDragging(false)
-    const target = /^cell-(\d+)-(\d+)$/.exec(String(over?.id ?? ''))
-    const moved = layout.get(String(active.id))
-    if (!target || !moved) return
-    const row = Number(target[2])
-    // Una nota ancha no puede empezar tan a la derecha que se salga del tablero.
-    const col = Math.min(Number(target[1]), columns - moved.span)
+  /** Dónde caería la nota arrastrada: la columna bajo el cursor y el hueco según su altura. */
+  const targetOf = (event: DragMoveEvent | DragEndEvent): DropTarget | null => {
+    const over = /^col-(\d+)$/.exec(String(event.over?.id ?? ''))
+    const host = hostRef.current
+    if (!over || !host) return null
+    const col = Number(over[1])
+    const pointer = event.activatorEvent as PointerEvent
+    const pointerY = pointer.clientY + event.delta.y
+    const middles = [...host.querySelectorAll<HTMLElement>(`[data-col="${col}"] [data-area-id]`)]
+      .filter((el) => el.dataset.areaId !== String(event.active.id))
+      .map((el) => {
+        const rect = el.getBoundingClientRect()
+        return rect.top + rect.height / 2
+      })
+    return { col, index: insertionIndex(middles, pointerY) }
+  }
 
-    // Se fija la posición de todas las notas tal como se ven ahora, y se mueve la elegida.
-    const next: Record<string, { col: number; row: number }> = {}
-    for (const [id, p] of layout) next[id] = { col: p.col, row: p.row }
-    next[String(active.id)] = { col, row }
-    // Si en esa celda había otra nota, las dos intercambian sus sitios.
-    const occupant = [...layout.entries()].find(
-      ([id, p]) =>
-        id !== String(active.id) &&
-        p.row === row &&
-        col < p.col + p.span &&
-        p.col < col + moved.span
-    )
-    if (occupant) next[occupant[0]] = { col: moved.col, row: moved.row }
-    setAreaPositions(next)
+  const handleDragEnd = (event: DragEndEvent): void => {
+    const target = targetOf(event)
+    setDraggedId(null)
+    setDropTarget(null)
+    if (!target) return
+    // Se fija la posición de todas las notas tal como quedan, con la elegida en su nuevo hueco.
+    setAreaPositions(moveNote(columns, String(event.active.id), target.col, target.index))
   }
 
   return (
@@ -108,40 +152,37 @@ export function PostItBoard({ areas, tasksOf, onEdit, onDelete }: Props): React.
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
-        onDragStart={() => setDragging(true)}
-        onDragCancel={() => setDragging(false)}
+        onDragStart={(event) => setDraggedId(String(event.active.id))}
+        onDragMove={(event) => setDropTarget(targetOf(event))}
+        onDragCancel={() => {
+          setDraggedId(null)
+          setDropTarget(null)
+        }}
         onDragEnd={handleDragEnd}
       >
-        <div
-          className="grid"
-          style={{
-            gap: CELL_GAP,
-            gridTemplateColumns: `repeat(${columns}, ${NOTE_WIDTH}px)`,
-            gridTemplateRows: `repeat(${rows}, minmax(${MIN_ROW_HEIGHT}px, auto))`
-          }}
-        >
-          {Array.from({ length: rows * columns }, (_, i) => (
-            <BoardCell
-              key={i}
-              col={i % columns}
-              row={Math.floor(i / columns)}
-              dragging={dragging}
+        {/* Las columnas llegan hasta abajo del todo del tablero, para poder soltar debajo de la última nota. */}
+        <div className="flex min-h-[70vh] items-stretch" style={{ gap: CELL_GAP }}>
+          {columns.map((column) => (
+            <ColumnView
+              key={column.index}
+              column={column}
+              dragging={draggedId !== null}
+              draggedId={draggedId}
+              dropIndex={dropTarget?.col === column.index ? dropTarget.index : null}
+              renderNote={(id) => {
+                const area = areaById.get(id)
+                if (!area) return null
+                return (
+                  <PlacedPostIt
+                    area={area}
+                    tasks={tasksOf(id)}
+                    onEdit={() => onEdit(area)}
+                    onDelete={() => onDelete(area)}
+                  />
+                )
+              }}
             />
           ))}
-          {areas.map((area) => {
-            const placement = layout.get(area.id)
-            if (!placement) return null
-            return (
-              <PlacedPostIt
-                key={area.id}
-                area={area}
-                tasks={tasksOf(area.id)}
-                placement={placement}
-                onEdit={() => onEdit(area)}
-                onDelete={() => onDelete(area)}
-              />
-            )
-          })}
         </div>
       </DndContext>
     </div>

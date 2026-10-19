@@ -96,6 +96,7 @@ export function PostIt({
   return (
     <div
       ref={drag?.setNodeRef}
+      data-area-id={area.id}
       style={{ ...drag?.style, width: frame?.width, height: frame?.height }}
       {...drag?.listeners}
       className={cn(
