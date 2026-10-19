@@ -74,8 +74,6 @@ interface DataState {
   setAreaPositions: (positions: Record<string, { col: number; row: number }>) => void
   /** Todos los post-its (ventana principal y escritorio) vuelven a su tamaño automático. */
   resetNoteSizes: () => void
-  /** Pone los post-its en el orden dado (lista de ids de áreas). */
-  reorderAreas: (orderedIds: string[]) => void
   setSortCriterion: (areaId: string, criterion: SortCriterion) => void
   /** Guarda el orden arrastrado de las tareas pendientes y pasa el área a "personalizado". */
   reorderTasks: (areaId: string, orderedPendingIds: string[]) => void
@@ -296,17 +294,6 @@ export const useDataStore = create<DataState>((set, get) => {
     },
 
     dismissAreaUndo: () => set({ areaUndo: undefined, areaUndoLeaving: false }),
-
-    reorderAreas: (orderedIds) => {
-      const { data } = get()
-      const position = new Map(orderedIds.map((id, i) => [id, i + 1]))
-      set({
-        data: {
-          ...data,
-          areas: data.areas.map((a) => ({ ...a, order: position.get(a.id) ?? a.order }))
-        }
-      })
-    },
 
     setSortCriterion: (areaId, criterion) => {
       const { data } = get()

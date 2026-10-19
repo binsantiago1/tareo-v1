@@ -1,12 +1,4 @@
-import { Button } from '@renderer/components/ui/button'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle
-} from '@renderer/components/ui/alert-dialog'
+import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import type { Area } from '../../../shared/types'
 
 interface Props {
@@ -18,6 +10,7 @@ interface Props {
   onConfirm: () => void
 }
 
+/** Confirmación para borrar un área: avisa de cuántas tareas se borran con ella. */
 export function DeleteAreaDialog({
   area,
   taskCount,
@@ -39,24 +32,13 @@ export function DeleteAreaDialog({
         : ''
 
   return (
-    <AlertDialog open={area !== null} onOpenChange={(open) => !open && onCancel()}>
-      <AlertDialogContent>
-        <AlertDialogTitle>¿Borrar el área «{area?.name}»?</AlertDialogTitle>
-        <AlertDialogDescription>
-          {tasksText}
-          {archivedText} Podrás deshacerlo durante unos segundos.
-        </AlertDialogDescription>
-        <div className="flex justify-end gap-2">
-          <AlertDialogCancel asChild>
-            <Button variant="outline">Cancelar</Button>
-          </AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button variant="destructive" onClick={onConfirm}>
-              Borrar área
-            </Button>
-          </AlertDialogAction>
-        </div>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={area !== null}
+      title={`¿Borrar el área «${area?.name ?? ''}»?`}
+      description={`${tasksText}${archivedText} Podrás deshacerlo durante unos segundos.`}
+      confirmLabel="Borrar área"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   )
 }
