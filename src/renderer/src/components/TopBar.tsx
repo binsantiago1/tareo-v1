@@ -1,13 +1,12 @@
-import { ArrowLeft, CalendarDays, LayoutGrid, List, Plus } from 'lucide-react'
+import { ArrowLeft, CalendarDays, List, Plus } from 'lucide-react'
 import { AppLogo } from '@renderer/components/AppLogo'
 import { SettingsMenu } from '@renderer/components/SettingsMenu'
 import { cn } from '@renderer/lib/utils'
 
-export type View = 'lista' | 'cuadricula' | 'calendario'
+export type View = 'lista' | 'calendario'
 
 const VIEWS = [
   { value: 'lista', label: 'Lista', Icon: List },
-  { value: 'cuadricula', label: 'Cuadrícula', Icon: LayoutGrid },
   { value: 'calendario', label: 'Calendario', Icon: CalendarDays }
 ] as const
 

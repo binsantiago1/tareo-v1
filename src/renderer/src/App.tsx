@@ -1,22 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@renderer/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog'
 import { AreaDialog } from '@renderer/components/AreaDialog'
 import { ArchiveView } from '@renderer/components/ArchiveView'
 import { BackupDialog } from '@renderer/components/BackupDialog'
 import { CalendarView } from '@renderer/components/CalendarView'
 import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
-import { GridPostIt } from '@renderer/components/GridPostIt'
-import { PostIt } from '@renderer/components/PostIt'
 import { PostItBoard } from '@renderer/components/PostItBoard'
 import { TopBar, type View } from '@renderer/components/TopBar'
 import { UndoToast } from '@renderer/components/UndoToast'
 import { useDataStore } from '@renderer/store/useDataStore'
-import { autoGridColumns, type GridColumns } from '../../shared/grid'
 import { DEFAULT_NOTE_COLOR, nextFreeColor } from '../../shared/palette'
 import type { Area } from '../../shared/types'
-
-type ColumnsSetting = 'auto' | GridColumns
 
 function App(): React.JSX.Element {
   const {
@@ -33,8 +27,6 @@ function App(): React.JSX.Element {
   } = useDataStore()
   const [view, setView] = useState<View>('lista')
   const [archiveOpen, setArchiveOpen] = useState(false)
-  const [columnsSetting, setColumnsSetting] = useState<ColumnsSetting>('auto')
-  const [openAreaId, setOpenAreaId] = useState<string | null>(null)
   const [backupOpen, setBackupOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Area | null>(null)
@@ -48,14 +40,8 @@ function App(): React.JSX.Element {
   // En el post-it también se ven (tachadas) las tareas recién completadas, unos segundos.
   const visibleOf = (areaId: string): typeof data.tasks =>
     data.tasks.filter((t) => t.areaId === areaId && (!t.completed || t.id in lingering))
-  const pendingOf = (areaId: string): typeof data.tasks =>
-    data.tasks.filter((t) => t.areaId === areaId && !t.completed)
   const deletingTasks = deleting ? data.tasks.filter((t) => t.areaId === deleting.id) : []
   const archivedCount = data.tasks.filter((t) => t.completed).length
-  const columns: GridColumns =
-    columnsSetting === 'auto' ? autoGridColumns(areas.length) : columnsSetting
-  // Si el área abierta se borra, el post-it ampliado se cierra solo.
-  const openArea = areas.find((a) => a.id === openAreaId)
 
   if (!loaded) return <main className="p-8 text-muted-foreground">Cargando…</main>
 
@@ -105,65 +91,15 @@ function App(): React.JSX.Element {
           </div>
         ) : view === 'calendario' ? (
           <CalendarView />
-        ) : view === 'lista' ? (
+        ) : (
           <PostItBoard
             areas={areas}
             tasksOf={visibleOf}
             onEdit={(area) => setEditing(area)}
             onDelete={(area) => setDeleting(area)}
           />
-        ) : (
-          <div className="grid gap-4">
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              Columnas:
-              <select
-                value={columnsSetting}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setColumnsSetting(v === 'auto' ? 'auto' : (Number(v) as GridColumns))
-                }}
-                className="h-8 rounded-md border border-input bg-field px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                <option value="auto">Automático ({autoGridColumns(areas.length)})</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-              </select>
-            </label>
-            <div
-              className="grid gap-4"
-              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-            >
-              {areas.map((area) => (
-                <GridPostIt
-                  key={area.id}
-                  area={area}
-                  tasks={pendingOf(area.id)}
-                  onOpen={() => setOpenAreaId(area.id)}
-                />
-              ))}
-            </div>
-          </div>
         )}
       </main>
-
-      {/* Post-it completo, abierto desde la Cuadrícula. */}
-      <Dialog open={openArea !== undefined} onOpenChange={(open) => !open && setOpenAreaId(null)}>
-        <DialogContent
-          aria-describedby={undefined}
-          className="max-h-[90vh] max-w-xl overflow-y-auto border-0 bg-transparent p-0 shadow-none"
-        >
-          <DialogTitle className="sr-only">Área {openArea?.name}</DialogTitle>
-          {openArea && (
-            <PostIt
-              area={openArea}
-              tasks={visibleOf(openArea.id)}
-              onEdit={() => setEditing(openArea)}
-              onDelete={() => setDeleting(openArea)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
       <AreaDialog

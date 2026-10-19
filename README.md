@@ -68,7 +68,7 @@ Las tres entidades (área, tarea, subtarea) pueden tener nota.
 ## 5. Vistas
 
 1. **Lista** (principal): post-its uno al lado del otro. Cada post-it muestra el nombre del área en grande, su nota y el listado de tareas con sus subtareas.
-2. **Cuadrícula**: post-its **cuadrados y comprimidos** en 2, 3 o 4 columnas según el número de áreas (propuesta: hasta 4 áreas → 2 columnas; de 5 a 9 → 3; 10 o más → 4; con opción manual para cambiarlo). Cada post-it cuadrado muestra el título y la nota del área y, debajo, **las tareas que quepan** en el cuadrado (si no caben todas, se indica "+N más"). Clic en el post-it para abrirlo completo.
+2. **Cuadrícula** *(RETIRADA: la vista Lista, con columnas libres y notas redimensionables, la sustituye)*: post-its **cuadrados y comprimidos** en 2, 3 o 4 columnas según el número de áreas (propuesta: hasta 4 áreas → 2 columnas; de 5 a 9 → 3; 10 o más → 4; con opción manual para cambiarlo). Cada post-it cuadrado muestra el título y la nota del área y, debajo, **las tareas que quepan** en el cuadrado (si no caben todas, se indica "+N más"). Clic en el post-it para abrirlo completo.
 3. **Calendario**: vista mensual; las tareas con fecha límite aparecen en su día (solo fecha, sin hora; no se muestran las completadas). Las tareas **sin fecha límite** aparecen en una zona debajo del calendario.
 
 ---
@@ -119,7 +119,7 @@ Las tres entidades (área, tarea, subtarea) pueden tener nota.
 - Sección Archivo: ver completadas, restaurar y borrar definitivamente (con confirmación).
 - **✅ Comprobación:** completar, ver en Archivo, restaurar y borrar.
 
-### Fase 7 — Vista Cuadrícula
+### Fase 7 — Vista Cuadrícula *(retirada después; sustituida por el tablero de la vista Lista)*
 - Post-its cuadrados y comprimidos con 2/3/4 columnas (sección 5).
 - Título y nota del área + tareas que quepan + "+N más".
 - Clic para abrir el post-it completo.

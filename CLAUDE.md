@@ -28,7 +28,7 @@ Proyecto: app de escritorio (Windows) de pendientes por áreas. Lee `README.md` 
 - Completadas pasan al Archivo (con "Deshacer"); desde ahí se restauran o se borran definitivamente.
 - Orden por área: prioridad (defecto), tiempo restante, fecha de creación (antiguas primero), personalizado (arrastrando).
 - Prioridad: sin prioridad, !, !!, !!!.
-- Vistas: Lista, Cuadrícula (post-its cuadrados, 2/3/4 columnas), Calendario (con tareas sin fecha debajo).
+- Vistas: Lista (tablero de post-its por columnas, con notas redimensionables) y Calendario (con tareas sin fecha debajo). La vista Cuadrícula se retiró (la Lista la hacía innecesaria).
 - Modo claro y oscuro desde el inicio.
 
 ## Diseño
