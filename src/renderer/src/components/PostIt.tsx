@@ -17,6 +17,7 @@ import { ResizeHandles, type Size } from '@renderer/components/ResizeHandles'
 import { RowMenu } from '@renderer/components/RowMenu'
 import { SortableTask } from '@renderer/components/SortableTask'
 import { useLongPressSensors } from '@renderer/lib/dnd'
+import { useWindowLongPressDrag } from '@renderer/lib/windowDrag'
 import { HOVER_ACTIONS } from '@renderer/lib/hoverActions'
 import { noteStyle } from '@renderer/lib/noteStyle'
 import { cn } from '@renderer/lib/utils'
@@ -76,6 +77,8 @@ export function PostIt({
   const isPinned = useDataStore((s) => s.pinned.includes(area.id))
   const sensors = useLongPressSensors()
   const articleRef = useRef<HTMLElement>(null)
+  // En el post-it de escritorio, la pulsación larga mueve la ventana (como en la app mueve el post-it).
+  const windowDrag = useWindowLongPressDrag(widget !== undefined)
 
   // `tasks` solo trae las pendientes: las completadas están en el Archivo.
   const pending = sortTasks(tasks, area.sortCriterion)
@@ -103,10 +106,12 @@ export function PostIt({
     >
       <article
         ref={articleRef}
+        onPointerDown={windowDrag.onPointerDown}
         style={noteStyle(area.color)}
         aria-label={`Área ${area.name}`}
         className={cn(
           'note paper group/postit flex h-full flex-col',
+          windowDrag.moving && 'opacity-90',
           frame?.height === undefined && (widget ? 'min-h-40' : 'min-h-64')
         )}
       >
@@ -116,7 +121,7 @@ export function PostIt({
             aria-label="Quitar del escritorio"
             title="Quitar del escritorio"
             onClick={widget.onClose}
-            className="no-drag absolute top-1.5 right-1.5 z-10 flex size-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within/postit:opacity-100 group-hover/postit:opacity-100 hover:bg-accent focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+            className="absolute top-1.5 right-1.5 z-10 flex size-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within/postit:opacity-100 group-hover/postit:opacity-100 hover:bg-accent focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
             <X className="size-4" />
           </button>
@@ -125,17 +130,11 @@ export function PostIt({
           <header
             className={cn('group/zone flex items-start justify-between gap-2', widget && 'pr-6')}
           >
-            {/* En el post-it de escritorio el título sirve para arrastrar la ventana. */}
-            <h2
-              className={cn(
-                'text-2xl leading-tight font-bold tracking-tight break-words',
-                widget && 'drag-region'
-              )}
-            >
+            <h2 className="text-2xl leading-tight font-bold tracking-tight break-words">
               {area.name}
             </h2>
             {/* Los iconos solo aparecen al pasar el cursor por el título (o al navegar con teclado). */}
-            <div className={cn(HOVER_ACTIONS, widget && 'no-drag')}>
+            <div className={HOVER_ACTIONS}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

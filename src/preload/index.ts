@@ -24,7 +24,15 @@ const api: DataApi = {
     ipcRenderer.send('widgets:altura', { content, overlay }),
   getWidgetInfo: () => ipcRenderer.invoke('widgets:info'),
   setWidgetSize: (width, height) => ipcRenderer.send('widgets:tamano', { width, height }),
-  resetWidgetSize: () => ipcRenderer.send('widgets:tamano-auto')
+  resetWidgetSize: () => ipcRenderer.send('widgets:tamano-auto'),
+  resetAllWidgetSizes: () => ipcRenderer.invoke('widgets:restablecer-todos'),
+  onWidgetSizeReset: (callback) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('widgets:tamano-restablecido', listener)
+    return () => ipcRenderer.removeListener('widgets:tamano-restablecido', listener)
+  },
+  moveWidget: (x, y) => ipcRenderer.send('widgets:mover', { x, y }),
+  getWidgetPosition: () => ipcRenderer.invoke('widgets:posicion')
 }
 
 if (process.contextIsolated) {

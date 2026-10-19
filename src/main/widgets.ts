@@ -306,6 +306,37 @@ export function createWidgetManager(options: Options): {
         rememberLater(areaId)
       })
 
+      ipcMain.handle('widgets:posicion', (event) => {
+        const window = BrowserWindow.fromWebContents(event.sender)
+        const [x, y] = window && !window.isDestroyed() ? window.getPosition() : [0, 0]
+        return { x, y }
+      })
+
+      // La interfaz mueve la ventana (arrastre por pulsación larga sobre el post-it).
+      ipcMain.on('widgets:mover', (event, pos: { x: number; y: number }) => {
+        const window = BrowserWindow.fromWebContents(event.sender)
+        if (!window || window.isDestroyed()) return
+        if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) return
+        window.setPosition(Math.round(pos.x), Math.round(pos.y))
+      })
+
+      // Botón "Restablecer tamaño de notas" de la ventana principal: todos los post-its de
+      // escritorio vuelven al tamaño automático (ancho normal y alto que muestra todas las tareas).
+      ipcMain.handle('widgets:restablecer-todos', async () => {
+        for (const entry of pinned) {
+          entry.userSized = false
+          delete entry.width
+          delete entry.height
+        }
+        await save()
+        for (const [areaId, layout] of layouts) {
+          layout.userSized = false
+          layout.width = DEFAULT_WIDTH
+          applyLayout(areaId)
+          windows.get(areaId)?.webContents.send('widgets:tamano-restablecido')
+        }
+      })
+
       // Doble clic en la esquina: vuelve al tamaño automático.
       ipcMain.on('widgets:tamano-auto', (event) => {
         const areaId = areaIdOf(BrowserWindow.fromWebContents(event.sender))

@@ -228,14 +228,6 @@ html.widget body {
   overflow-x: hidden;
 }
 
-/* Zonas de la ventana flotante: el título sirve para moverla; lo demás no. */
-.drag-region {
-  -webkit-app-region: drag;
-}
-.no-drag {
-  -webkit-app-region: no-drag;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

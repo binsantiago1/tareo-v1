@@ -36,3 +36,7 @@ La portable es igual de funcional (post-its de escritorio, copias de seguridad, 
 - Arranca algo más lento que la instalada (se descomprime al abrirse).
 - Si fija post-its en el escritorio, se registra para arrancar con Windows apuntando al `.exe` portable: **no hay que moverlo ni borrarlo** de donde esté (por ejemplo, mejor en `Documentos`, no en Descargas).
 - Windows puede mostrar «Windows protegió su PC» (no tiene firma digital de pago): Más información → Ejecutar de todas formas. Algunos ordenadores de empresa bloquean `.exe` no firmados; en ese caso hay que pedir permiso a Informática.
+
+## Notas: tamaño y movimiento
+- Engranaje → **Restablecer tamaño de notas**: todas las notas (en la ventana principal y en el escritorio) vuelven al ancho normal y al alto justo para ver todas sus tareas.
+- Un post-it de escritorio se mueve **manteniendo pulsado** (un cuarto de segundo) en cualquier parte de la nota, menos sobre las tareas, igual que en la ventana principal.

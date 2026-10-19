@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Archive, DatabaseBackup, Moon, Settings, Sun } from 'lucide-react'
+import { Archive, DatabaseBackup, Moon, RotateCcw, Settings, Sun } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover'
 import { Switch } from '@renderer/components/ui/switch'
 import { useTheme } from '@renderer/lib/theme'
 import { cn } from '@renderer/lib/utils'
+import { useDataStore } from '@renderer/store/useDataStore'
 
 interface Props {
   archiveOpen: boolean
@@ -27,6 +28,7 @@ export function SettingsMenu({
 }: Props): React.JSX.Element {
   const { dark, setDark } = useTheme()
   const [open, setOpen] = useState(false)
+  const resetNoteSizes = useDataStore((state) => state.resetNoteSizes)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -76,6 +78,18 @@ export function SettingsMenu({
         >
           <DatabaseBackup className="size-4" />
           Copias de seguridad
+        </button>
+        <button
+          type="button"
+          className={ITEM_CLASS}
+          title="Deja cada nota con el ancho normal y el alto justo para ver todas sus tareas"
+          onClick={() => {
+            resetNoteSizes()
+            setOpen(false)
+          }}
+        >
+          <RotateCcw className="size-4" />
+          Restablecer tamaño de notas
         </button>
       </PopoverContent>
     </Popover>

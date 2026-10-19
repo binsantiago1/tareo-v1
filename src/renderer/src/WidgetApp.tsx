@@ -29,6 +29,8 @@ export default function WidgetApp({ areaId }: { areaId: string }): React.JSX.Ele
   useEffect(() => {
     void init()
     void window.api.getWidgetInfo().then((info) => setUserSized(info.userSized))
+    // Si se pulsa "Restablecer tamaño de notas" en la ventana principal, este post-it vuelve al tamaño automático.
+    return window.api.onWidgetSizeReset(() => setUserSized(false))
   }, [init])
 
   const area = data.areas.find((a) => a.id === areaId)
