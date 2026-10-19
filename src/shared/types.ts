@@ -41,6 +41,9 @@ export interface Area {
   /** Tamaño del post-it en la ventana principal, en píxeles (si se cambió a mano). */
   width?: number
   height?: number
+  /** Celda del tablero (0 = primera columna / primera fila). Sin valor, se coloca sola. */
+  col?: number
+  row?: number
   /** Color del post-it (id de la paleta). Las áreas antiguas pueden no tenerlo. */
   color?: string
 }

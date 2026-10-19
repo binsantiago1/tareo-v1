@@ -70,6 +70,8 @@ interface DataState {
   removeArea: (id: string) => void
   /** Cambia el tamaño del post-it en la ventana principal (sin valores = tamaño automático). */
   setAreaSize: (id: string, size: { width?: number; height?: number }) => void
+  /** Guarda la celda (columna y fila) de varios post-its a la vez. */
+  setAreaPositions: (positions: Record<string, { col: number; row: number }>) => void
   /** Todos los post-its (ventana principal y escritorio) vuelven a su tamaño automático. */
   resetNoteSizes: () => void
   /** Pone los post-its en el orden dado (lista de ids de áreas). */
@@ -221,6 +223,16 @@ export const useDataStore = create<DataState>((set, get) => {
           areas: data.areas.map((a) =>
             a.id === id ? { ...a, name, note: note || undefined, color } : a
           )
+        }
+      })
+    },
+
+    setAreaPositions: (positions) => {
+      const { data } = get()
+      set({
+        data: {
+          ...data,
+          areas: data.areas.map((a) => (positions[a.id] ? { ...a, ...positions[a.id] } : a))
         }
       })
     },

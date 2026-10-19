@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
 import { Button } from '@renderer/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog'
 import { AreaDialog } from '@renderer/components/AreaDialog'
@@ -10,10 +8,9 @@ import { CalendarView } from '@renderer/components/CalendarView'
 import { DeleteAreaDialog } from '@renderer/components/DeleteAreaDialog'
 import { GridPostIt } from '@renderer/components/GridPostIt'
 import { PostIt } from '@renderer/components/PostIt'
-import { SortablePostIt } from '@renderer/components/SortablePostIt'
+import { PostItBoard } from '@renderer/components/PostItBoard'
 import { TopBar, type View } from '@renderer/components/TopBar'
 import { UndoToast } from '@renderer/components/UndoToast'
-import { useLongPressSensors } from '@renderer/lib/dnd'
 import { useDataStore } from '@renderer/store/useDataStore'
 import { autoGridColumns, type GridColumns } from '../../shared/grid'
 import { DEFAULT_NOTE_COLOR, nextFreeColor } from '../../shared/palette'
@@ -32,10 +29,8 @@ function App(): React.JSX.Element {
     addArea,
     updateArea,
     removeArea,
-    reorderAreas,
     lingering
   } = useDataStore()
-  const sensors = useLongPressSensors()
   const [view, setView] = useState<View>('lista')
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [columnsSetting, setColumnsSetting] = useState<ColumnsSetting>('auto')
@@ -61,15 +56,6 @@ function App(): React.JSX.Element {
     columnsSetting === 'auto' ? autoGridColumns(areas.length) : columnsSetting
   // Si el área abierta se borra, el post-it ampliado se cierra solo.
   const openArea = areas.find((a) => a.id === openAreaId)
-
-  const handleAreaDragEnd = ({ active, over }: DragEndEvent): void => {
-    if (!over || active.id === over.id) return
-    const ids = areas.map((a) => a.id)
-    const from = ids.indexOf(String(active.id))
-    const to = ids.indexOf(String(over.id))
-    if (from === -1 || to === -1) return
-    reorderAreas(arrayMove(ids, from, to))
-  }
 
   if (!loaded) return <main className="p-8 text-muted-foreground">Cargando…</main>
 
@@ -120,25 +106,12 @@ function App(): React.JSX.Element {
         ) : view === 'calendario' ? (
           <CalendarView />
         ) : view === 'lista' ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleAreaDragEnd}
-          >
-            <SortableContext items={areas.map((a) => a.id)} strategy={rectSortingStrategy}>
-              <div className="flex flex-wrap items-start gap-4">
-                {areas.map((area) => (
-                  <SortablePostIt
-                    key={area.id}
-                    area={area}
-                    tasks={visibleOf(area.id)}
-                    onEdit={() => setEditing(area)}
-                    onDelete={() => setDeleting(area)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <PostItBoard
+            areas={areas}
+            tasksOf={visibleOf}
+            onEdit={(area) => setEditing(area)}
+            onDelete={(area) => setDeleting(area)}
+          />
         ) : (
           <div className="grid gap-4">
             <label className="flex items-center gap-2 text-sm text-muted-foreground">

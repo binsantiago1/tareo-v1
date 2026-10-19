@@ -1,30 +1,34 @@
 import { useState } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { PostIt } from '@renderer/components/PostIt'
 import { useDataStore } from '@renderer/store/useDataStore'
+import { NOTE_WIDTH, type Placement } from '../../../shared/layout'
 import type { Area, Task } from '../../../shared/types'
 
 interface Props {
   area: Area
   tasks: Task[]
+  /** Celda (columna, fila) y columnas que ocupa dentro del tablero. */
+  placement: Placement
   onEdit: () => void
   onDelete: () => void
 }
 
-/** Ancho de un post-it nuevo en la ventana principal. */
-const DEFAULT_WIDTH = 300
-
 const TILTS = ['-0.5deg', '0.4deg', '-0.2deg', '0.55deg']
 
-/** Post-it que se puede mover de sitio manteniendo pulsado el clic (vista Lista). */
-export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.JSX.Element {
+/** Post-it del tablero: ocupa su celda y se puede llevar a cualquier otra manteniendo pulsado. */
+export function PlacedPostIt({
+  area,
+  tasks,
+  placement,
+  onEdit,
+  onDelete
+}: Props): React.JSX.Element {
   const setAreaSize = useDataStore((state) => state.setAreaSize)
   // Mientras se arrastra un asa, el tamaño se ve al momento pero solo se guarda al soltar.
   const [live, setLive] = useState<{ width: number; height: number } | null>(null)
-  const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: area.id
-  })
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({ id: area.id })
 
   return (
     <PostIt
@@ -33,7 +37,7 @@ export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.
       onEdit={onEdit}
       onDelete={onDelete}
       frame={{
-        width: live?.width ?? area.width ?? DEFAULT_WIDTH,
+        width: live?.width ?? area.width ?? NOTE_WIDTH,
         height: live?.height ?? area.height
       }}
       resize={{
@@ -57,8 +61,11 @@ export function SortablePostIt({ area, tasks, onEdit, onDelete }: Props): React.
         isDragging,
         listeners,
         style: {
+          gridColumn: `${placement.col + 1} / span ${placement.span}`,
+          gridRow: placement.row + 1,
+          alignSelf: 'start',
+          zIndex: isDragging ? 20 : 1,
           transform: CSS.Translate.toString(transform),
-          transition,
           // Cada post-it va ligeramente torcido, como pegado a mano; al arrastrarlo se endereza.
           rotate: isDragging ? '0deg' : TILTS[area.order % TILTS.length]
         }
